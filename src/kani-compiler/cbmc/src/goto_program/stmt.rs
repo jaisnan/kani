@@ -22,6 +22,26 @@ use tracing::debug;
 ///      would translate to `Stmt::while_loop(c, vec![stmt1, stmt2], loc)`
 /// Statements can also be created using the converters in the `Expr` module.
 ///
+#[derive(Debug, Clone)]
+pub enum PropertyClass {
+    ExpectFail,
+    UnsupportedStructs,
+    DefaultAssertion,
+}
+
+impl PropertyClass {
+    fn as_str(&self) -> &'static str {
+
+        match self {
+            PropertyClass::ExpectFail => "expect_fail",
+            PropertyClass::UnsupportedStructs => "unsupported_struct",
+            PropertyClass::DefaultAssertion => "assertion",
+            _ => ""
+        }
+    }
+}
+
+///
 /// TODO:
 /// The CBMC irep resentation uses sharing to reduce the in-memory size of expressions.
 /// This is not currently implemented for these expressions, but would be possible given a factory.
@@ -43,6 +63,8 @@ pub enum StmtBody {
     /// `assert(cond)`
     Assert {
         cond: Expr,
+        msg: InternedString,
+        property_class: PropertyClass,
     },
     /// `__CPROVER_assume(cond);`
     Assume {
@@ -181,20 +203,19 @@ impl Stmt {
     }
 
     /// `assert(cond);`
-    pub fn assert_stmt(cond: Expr, prop_class: &str, msg: &str, loc: Location) -> Self {
+    pub fn assert_stmt(cond: Expr, prop_class: &str, message: &str, loc: Location) -> Self {
         assert!(cond.typ().is_bool());
 
-        // TODO: Extract location metadata in a safer manner
-        let file = loc.filename().unwrap();
-        let line = loc.line().unwrap();
-        let function = loc.function_name();
-        let col = loc.get_column_number().unwrap();
-        let comment = msg.to_string();
-        let property_class = prop_class.to_string();
+        let msg = message;
+        let property_class = prop_class;
 
-        let loc = Location::new(file, function, line, Some(col), comment, property_class);
+        let new_loc = if let Location::Loc{file, line, function, col, .. } = loc {
+            Location::assert{file, line, function, col, comment: msg.to_string(), property_class: prop_class.to_string());
+        } else {
+            loc
+        }
 
-        stmt!(Assert { cond }, loc)
+        stmt!(Assert { cond, property_class, msg }, new_loc)
     }
 
     /// `__CPROVER_assert(cond, msg);`

@@ -18,6 +18,12 @@ pub enum Location {
         function: Option<InternedString>,
         line: u64,
         col: Option<u64>,
+    },
+    assert {
+        file: InternedString,
+        function: Option<InternedString>,
+        line: u64,
+        col: Option<u64>,
         comment: InternedString,
         property_class: InternedString,
     },
@@ -93,6 +99,8 @@ impl Location {
                 format!("<{}>", function_name)
             }
             Location::Loc { file, line, .. } => format!("{}:{}", file, line),
+            Location::assert { property_class, comment, .. } => format!("{}:{}", property_class, comment),
+
         }
     }
 }
@@ -100,6 +108,27 @@ impl Location {
 /// Constructors
 impl Location {
     pub fn new<T, U: Into<InternedString>, V: Into<InternedString>>(
+        file: U,
+        function: Option<V>,
+        line: T,
+        col: Option<T>,
+        comment: U,
+        property_name: U,
+    ) -> Location
+    where
+        T: TryInto<u64>,
+        T::Error: Debug,
+    {
+        let file = file.into();
+        let line = line.try_into().unwrap();
+        let col = col.map(|x| x.try_into().unwrap());
+        let function = function.intern();
+        let property_class = property_name.into();
+        let comment = comment.into();
+        Location::Loc { file, function, line, col, comment, property_class }
+    }
+
+    pub fn assert_location<T, U: Into<InternedString>, V: Into<InternedString>>(
         file: U,
         function: Option<V>,
         line: T,

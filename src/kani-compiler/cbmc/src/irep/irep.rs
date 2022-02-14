@@ -68,6 +68,16 @@ impl Irep {
     pub fn with_type(self, t: &Type, mm: &MachineModel) -> Self {
         self.with_named_sub(IrepId::Type, t.to_irep(mm))
     }
+
+    pub fn with_assert_props(self, property_class: &PropertyClass, msg: &InternedString, l : &Location, mm: &MachineModel) -> Self {
+        if !l.is_none() {
+
+            let temp_location_irep = l.to_irep(&mm)
+
+            self.with_named_sub(IrepId::CSourceLocation, l.to_irep(&mm))
+        } else {
+            self
+        }    }
 }
 
 /// Predicates

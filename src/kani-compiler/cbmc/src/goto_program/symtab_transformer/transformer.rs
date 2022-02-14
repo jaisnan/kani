@@ -5,7 +5,7 @@ use crate::goto_program::{
     BinaryOperand, CIntType, DatatypeComponent, Expr, ExprValue, Location, Parameter, SelfOperand,
     Stmt, StmtBody, SwitchCase, Symbol, SymbolTable, SymbolValues, Type, UnaryOperand,
 };
-use crate::InternedString;
+use crate::{InternedString};
 use num::bigint::BigInt;
 use std::collections::HashSet;
 
@@ -496,7 +496,7 @@ pub trait Transformer: Sized {
     fn transform_stmt(&mut self, stmt: &Stmt) -> Stmt {
         match stmt.body() {
             StmtBody::Assign { lhs, rhs } => self.transform_stmt_assign(lhs, rhs),
-            StmtBody::Assert { cond } => self.transform_stmt_assert(cond),
+            StmtBody::Assert { cond, property_class, msg } => self.transform_stmt_assert(cond, property_class, msg),
             StmtBody::Assume { cond } => self.transform_stmt_assume(cond),
             StmtBody::AtomicBlock(block) => self.transform_stmt_atomic_block(block),
             StmtBody::Block(block) => self.transform_stmt_block(block),
@@ -531,10 +531,10 @@ pub trait Transformer: Sized {
     }
 
     /// Transforms a CPROVER assume stmt (`__CPROVER_assert(cond);`)
-    fn transform_stmt_assert(&mut self, cond: &Expr) -> Stmt {
+    fn transform_stmt_assert(&mut self, cond: &Expr, property_class: &InternedString, msg: &InternedString) -> Stmt {
         let transformed_cond = self.transform_expr(cond);
-        let msg = "test_message";
-        let property_class = "test_property_class";
+        let msg = msg.to_owned();
+        let property_class = property_class.to_owned();
         Stmt::assert_stmt(transformed_cond, property_class, msg, Location::none())
     }
 

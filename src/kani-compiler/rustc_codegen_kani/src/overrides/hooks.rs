@@ -103,12 +103,12 @@ impl<'tcx> GotocHook<'tcx> for ExpectFail {
         let msg = "EXPECTED FAIL";
 
         // property_class is used as a unique identifier for this assert
-        let _property_class = "expect_fail";
+        let property_class = PropertyClass::ExpectFail;
 
         let loc = tcx.codegen_span_option(span);
         Stmt::block(
             vec![
-                Stmt::assert(cond, msg, loc.clone()),
+                Stmt::assert_stmt(cond, property_class, msg, loc.clone()),
                 Stmt::goto(tcx.current_fn().find_label(&target), loc.clone()),
             ],
             loc,
