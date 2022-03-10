@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 use self::StmtBody::*;
 use super::{BuiltinFn, Expr, Location};
-use crate::InternedString;
-use std::fmt::Debug;
+use crate::{InternedString, InternString};
+use std::{fmt::Debug, str::FromStr};
 use tracing::debug;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -22,21 +22,33 @@ use tracing::debug;
 ///      would translate to `Stmt::while_loop(c, vec![stmt1, stmt2], loc)`
 /// Statements can also be created using the converters in the `Expr` module.
 ///
-#[derive(Debug, Clone)]
+#[derive(Copy, Debug, Clone)]
 pub enum PropertyClass {
     ExpectFail,
     UnsupportedStructs,
     DefaultAssertion,
 }
 
-impl PropertyClass {
-    fn as_str(&self) -> &'static str {
+impl FromStr for PropertyClass {
 
+    type Err = &'static str;
+
+    fn from_str(input: &str) -> Result<PropertyClass, Self::Err> {
+        match input {
+            "expect_fail"  => Ok(PropertyClass::ExpectFail),
+            "unsupported_struct"  => Ok(PropertyClass::UnsupportedStructs),
+            "assertion"  => Ok(PropertyClass::DefaultAssertion),
+            _ => Err("No such property class"),
+        }
+    }
+}
+
+impl PropertyClass {
+    pub fn as_str(&self) -> &str {
         match self {
             PropertyClass::ExpectFail => "expect_fail",
             PropertyClass::UnsupportedStructs => "unsupported_struct",
-            PropertyClass::DefaultAssertion => "assertion",
-            _ => ""
+            PropertyClass::DefaultAssertion => "assertion"
         }
     }
 }
@@ -203,19 +215,19 @@ impl Stmt {
     }
 
     /// `assert(cond);`
-    pub fn assert_stmt(cond: Expr, prop_class: &str, message: &str, loc: Location) -> Self {
+    pub fn assert_stmt(cond: Expr, property_class: PropertyClass, message: &str, loc: Location) -> Self {
         assert!(cond.typ().is_bool());
 
-        let msg = message;
-        let property_class = prop_class;
+        let msg = message.into();
 
-        let new_loc = if let Location::Loc{file, line, function, col, .. } = loc {
-            Location::assert{file, line, function, col, comment: msg.to_string(), property_class: prop_class.to_string());
-        } else {
-            loc
-        }
+        // match enum of string
+        // let new_loc = if let Location::Loc{file, line, function, col, .. } = loc {
+        //     Location::Assert{file, line, function, col, comment: Some(msg), property_class: Some(prop_class.to_string().intern())}
+        // } else {
+        //     loc
+        // };
 
-        stmt!(Assert { cond, property_class, msg }, new_loc)
+        stmt!(Assert { cond, property_class, msg }, loc)
     }
 
     /// `__CPROVER_assert(cond, msg);`

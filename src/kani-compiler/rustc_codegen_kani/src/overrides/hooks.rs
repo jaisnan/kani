@@ -10,7 +10,7 @@
 
 use crate::utils::instance_name_starts_with;
 use crate::GotocCtx;
-use cbmc::goto_program::{BuiltinFn, Expr, Location, Stmt, Symbol, Type};
+use cbmc::goto_program::{BuiltinFn, Expr, Location, Stmt, Symbol, Type, PropertyClass};
 use cbmc::NO_PRETTY_NAME;
 use rustc_middle::mir::{BasicBlock, Place};
 use rustc_middle::ty::layout::LayoutOf;

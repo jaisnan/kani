@@ -19,13 +19,13 @@ pub enum Location {
         line: u64,
         col: Option<u64>,
     },
-    assert {
+    Assert {
         file: InternedString,
         function: Option<InternedString>,
         line: u64,
         col: Option<u64>,
-        comment: InternedString,
-        property_class: InternedString,
+        comment: Option<InternedString>,
+        property_class: Option<InternedString>,
     },
 }
 
@@ -73,16 +73,16 @@ impl Location {
         }
     }
 
-    pub fn get_comment(&self) -> Option<String> {
+    pub fn get_comment(&self) -> Option<InternedString> {
         match self {
-            Location::Loc { comment, .. } => Some(comment.to_string()),
+            Location::Assert { comment, .. } => *comment,
             _ => None,
         }
     }
 
-    pub fn get_property_class(&self) -> Option<String> {
+    pub fn get_property_class(&self) -> Option<InternedString> {
         match self {
-            Location::Loc { property_class, .. } => Some(property_class.to_string()),
+            Location::Assert { property_class, .. } => *property_class,
             _ => None,
         }
     }
@@ -99,7 +99,7 @@ impl Location {
                 format!("<{}>", function_name)
             }
             Location::Loc { file, line, .. } => format!("{}:{}", file, line),
-            Location::assert { property_class, comment, .. } => format!("{}:{}", property_class, comment),
+            Location::Assert { property_class, comment, .. } => format!("{:?}:{:?}", property_class, comment),
 
         }
     }
@@ -112,8 +112,6 @@ impl Location {
         function: Option<V>,
         line: T,
         col: Option<T>,
-        comment: U,
-        property_name: U,
     ) -> Location
     where
         T: TryInto<u64>,
@@ -123,9 +121,7 @@ impl Location {
         let line = line.try_into().unwrap();
         let col = col.map(|x| x.try_into().unwrap());
         let function = function.intern();
-        let property_class = property_name.into();
-        let comment = comment.into();
-        Location::Loc { file, function, line, col, comment, property_class }
+        Location::Loc { file, function, line, col }
     }
 
     pub fn assert_location<T, U: Into<InternedString>, V: Into<InternedString>>(
@@ -133,8 +129,8 @@ impl Location {
         function: Option<V>,
         line: T,
         col: Option<T>,
-        comment: U,
-        property_name: U,
+        comment: Option<U>,
+        property_name: Option<U>,
     ) -> Location
     where
         T: TryInto<u64>,
@@ -144,9 +140,9 @@ impl Location {
         let line = line.try_into().unwrap();
         let col = col.map(|x| x.try_into().unwrap());
         let function = function.intern();
-        let property_class = property_name.into();
-        let comment = comment.into();
-        Location::Loc { file, function, line, col, comment, property_class }
+        let property_class = Some(property_name.unwrap().into());
+        let comment = Some(comment.unwrap().into());
+        Location::Assert { file, function, line, col, comment, property_class }
     }
 
     pub fn none() -> Location {

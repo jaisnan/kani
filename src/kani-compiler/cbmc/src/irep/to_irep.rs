@@ -335,6 +335,19 @@ impl ToIrep for Location {
                 .with_named_sub_option(IrepId::Column, col.map(Irep::just_int_id))
                 .with_named_sub_option(IrepId::Function, function.map(Irep::just_string_id))
             }
+            Location::Assert { file, function, line, col, comment, property_class } => {
+                Irep::just_named_sub(vector_map![
+                    (IrepId::File, Irep::just_string_id(file.to_string())),
+                    (IrepId::Line, Irep::just_int_id(*line)),
+                ])
+                .with_named_sub_option(IrepId::Column, col.map(Irep::just_int_id))
+                .with_named_sub_option(IrepId::Function, function.map(Irep::just_string_id))
+                .with_named_sub_option(IrepId::Comment, comment.map(Irep::just_string_id))
+                .with_named_sub_option(
+                    IrepId::PropertyClass,
+                    property_class.map(Irep::just_string_id),
+                )
+            }
         }
     }
 }
@@ -356,8 +369,7 @@ impl ToIrep for Stmt {
         //
         match self.body() {
             _ => self.body().to_irep(mm).with_location(self.location(), mm),
-            StmtBody::Assert { cond, property_class, msg } => code_irep(IrepId::Assert, vec![cond.to_irep(mm)])
-
+            StmtBody::Assert { cond, property_class, msg } => code_irep(IrepId::Assert, vec![cond.to_irep(mm)]).with_assert_properties(property_class, *msg, self.location(), mm)
         }
     }
 }
@@ -368,7 +380,10 @@ impl ToIrep for StmtBody {
             StmtBody::Assign { lhs, rhs } => {
                 code_irep(IrepId::Assign, vec![lhs.to_irep(mm), rhs.to_irep(mm)])
             }
-            StmtBody::Assert { cond, .. } => code_irep(IrepId::Assert, vec![cond.to_irep(mm)]),
+            StmtBody::Assert { cond, .. } => {
+                // Handled by ToIrep for stmt as this requires adding location data to IRep
+                unreachable!()
+            },
             StmtBody::Assume { cond } => code_irep(IrepId::Assume, vec![cond.to_irep(mm)]),
             StmtBody::AtomicBlock(stmts) => {
                 let mut irep_stmts = vec![code_irep(IrepId::AtomicBegin, vec![])];

@@ -4,6 +4,8 @@
 
 use super::super::goto_program::{Location, Type};
 use super::super::MachineModel;
+use crate::InternString;
+use crate::goto_program::PropertyClass;
 use super::{IrepId, ToIrep};
 use crate::cbmc_string::InternedString;
 use num::BigInt;
@@ -69,15 +71,18 @@ impl Irep {
         self.with_named_sub(IrepId::Type, t.to_irep(mm))
     }
 
-    pub fn with_assert_props(self, property_class: &PropertyClass, msg: &InternedString, l : &Location, mm: &MachineModel) -> Self {
+    pub fn with_assert_properties(self, property_class: &PropertyClass, msg: InternedString, l : &Location, mm: &MachineModel) -> Self {
         if !l.is_none() {
-
-            let temp_location_irep = l.to_irep(&mm)
-
-            self.with_named_sub(IrepId::CSourceLocation, l.to_irep(&mm))
+            let temp_location_irep = l.to_irep(&mm);
+            temp_location_irep.with_named_sub_option(IrepId::Comment, Some(Irep::just_string_id(msg)))
+            .with_named_sub_option(
+                IrepId::PropertyClass,
+                Some(Irep::just_string_id(property_class.as_str())),
+            )
         } else {
             self
-        }    }
+        }
+    }
 }
 
 /// Predicates

@@ -20,16 +20,11 @@ impl<'tcx> GotocCtx<'tcx> {
             Err(_) => filename0,
         };
 
-        // Default to empty strings for both Comment and Property_class
-        let comment = "".to_string();
-        let property_class = "".to_string();
         Location::new(
             filename1,
             self.current_fn.as_ref().map(|x| x.readable_name().to_string()),
             line,
             Some(col),
-            comment,
-            property_class,
         )
     }
 
