@@ -1,5 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
+
 trait Shape {
     fn area(&self) -> u32;
     fn vol(&self, z: u32) -> u32;

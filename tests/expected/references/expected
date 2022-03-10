@@ -1,1 +1,2 @@
-line 17 assertion failed: z == 2: SUCCESS
+SUCCESS\
+assertion failed: z == 2

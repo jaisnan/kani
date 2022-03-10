@@ -1,2 +1,4 @@
-line 25 assertion failed: bar.a() == 3: SUCCESS
-line 26 assertion failed: bar.b() == 5: SUCCESS
+SUCCESS\
+assertion failed: bar.a() == 3
+SUCCESS\
+assertion failed: bar.b() == 5

@@ -1,5 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
+
 fn foo(x: &[i32; 5]) -> &[i32] {
     &x[..]
 }

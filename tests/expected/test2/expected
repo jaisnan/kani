@@ -1,5 +1,10 @@
-line 7 attempt to shift right by `const 1_i32`, which would overflow: SUCCESS
-line 8 attempt to compute `_2 + const 1_i32`, which would overflow: SUCCESS
-line 13 assertion failed: i == 3: FAILURE
-line 15 assertion failed: i == 2: SUCCESS
-line 17 assertion failed: i == 2 || i == 3: SUCCESS
+SUCCESS\
+attempt to shift right with overflow
+SUCCESS\
+attempt to add with overflow
+FAILURE\
+assertion failed: i == 3
+SUCCESS\
+assertion failed: i == 2
+SUCCESS\
+assertion failed: i == 2 || i == 3

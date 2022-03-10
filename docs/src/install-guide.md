@@ -5,8 +5,8 @@ Kani must currently be built from source.
 In general, the following dependencies are required. Note: These dependencies may be installed by running the CI scripts shown below and there is no need to install them separately, for their respective OS.
 
 1. Cargo installed via rustup
-2. [CBMC](https://github.com/diffblue/cbmc) (>= 5.48.0)
-3. [CBMC Viewer](https://github.com/awslabs/aws-viewer-for-cbmc) (>= 2.6)
+2. [CBMC](https://github.com/diffblue/cbmc) (>= 5.50.0)
+3. [CBMC Viewer](https://github.com/awslabs/aws-viewer-for-cbmc) (>= 2.10)
 
 ## Installing on Ubuntu 20.04
 
@@ -19,7 +19,7 @@ cd kani
 git submodule update --init
 ./scripts/setup/ubuntu-20.04/install_deps.sh
 ./scripts/setup/ubuntu-20.04/install_cbmc.sh
-./scripts/setup/install_viewer.sh 2.6
+./scripts/setup/install_viewer.sh 2.10
 ./scripts/setup/install_rustup.sh
 source $HOME/.cargo/env
 ```
@@ -35,17 +35,17 @@ cd kani
 git submodule update --init
 ./scripts/setup/macos-10.15/install_deps.sh
 ./scripts/setup/macos-10.15/install_cbmc.sh
-./scripts/setup/install_viewer.sh 2.6
+./scripts/setup/install_viewer.sh 2.10
 ./scripts/setup/install_rustup.sh
 source $HOME/.cargo/env
 ```
 
 ## Building and testing Kani
 
-Build kani-compiler executable:
+Build Kani's packages:
 
 ```
-( cd src/kani-compiler && cargo build )
+cargo build
 ```
 
 Then, optionally, run the regression tests:
@@ -87,12 +87,12 @@ You should get a result like this one:
 
 ```
 [snipped output]
-** Results:
-test.rs function main
-[main.assertion.1] line 2 assertion failed: 1 == 2: FAILURE
-
-** 1 of 1 failed (2 iterations)
-VERIFICATION FAILED
+RESULTS:
+Check 1: main.assertion.1
+         - Status: FAILURE
+         - Description: "assertion failed: 1 == 2"
+[...]
+VERIFICATION:- FAILED
 ```
 
 Fix the test and you should see `kani` succeed.

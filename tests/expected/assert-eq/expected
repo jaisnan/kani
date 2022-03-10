@@ -1,3 +1,6 @@
-a panicking function core::panicking::assert_failed is invoked: SUCCESS
-a panicking function core::panicking::assert_failed is invoked: FAILURE
-a panicking function core::panicking::assert_failed is invoked: SUCCESS
+SUCCESS\
+assertion failed: x + 1 == y
+FAILURE\
+assertion failed: x == y
+SUCCESS\
+assertion failed: x != y

@@ -5,6 +5,7 @@
   - [Comparison with other tools](./tool-comparison.md)
   - [Kani on a single file](./kani-single-file.md)
   - [Kani on a package](./cargo-kani.md)
+  - [Kani result types](./kani-result-types.md)
   - [Debugging failures]()
   - [Debugging non-termination]()
   - [Debugging coverage]()
@@ -17,6 +18,7 @@
   - [Where to start on real code](./tutorial-real-code.md)
 
 - [Kani developer documentation](./dev-documentation.md)
+  - [Working with `RUSTC`](./rustc-hacks.md)
   - [Testing](./kani-testing.md)
   - [Book runner](./bookrunner.md)
 
