@@ -13,13 +13,9 @@ pub enum Location {
     BuiltinFunction { function_name: InternedString, line: Option<u64> },
     /// Location in user code.
     /// `function` is `None` for global, `Some(function_name)` for function local.
-    Loc {
-        file: InternedString,
-        function: Option<InternedString>,
-        line: u64,
-        col: Option<u64>,
-    },
-    Assert {
+    Loc { file: InternedString, function: Option<InternedString>, line: u64, col: Option<u64> },
+    /// Location for Statements that use Property Class and Description - Assert, Assume, Cover etc.
+    Property {
         file: InternedString,
         function: Option<InternedString>,
         line: u64,
@@ -75,14 +71,14 @@ impl Location {
 
     pub fn get_comment(&self) -> Option<InternedString> {
         match self {
-            Location::Assert { comment, .. } => *comment,
+            Location::Property { comment, .. } => *comment,
             _ => None,
         }
     }
 
     pub fn get_property_class(&self) -> Option<InternedString> {
         match self {
-            Location::Assert { property_class, .. } => *property_class,
+            Location::Property { property_class, .. } => *property_class,
             _ => None,
         }
     }
@@ -99,8 +95,9 @@ impl Location {
                 format!("<{}>", function_name)
             }
             Location::Loc { file, line, .. } => format!("{}:{}", file, line),
-            Location::Assert { property_class, comment, .. } => format!("{:?}:{:?}", property_class, comment),
-
+            Location::Property { property_class, comment, .. } => {
+                format!("{:?}:{:?}", property_class, comment)
+            }
         }
     }
 }
@@ -124,7 +121,7 @@ impl Location {
         Location::Loc { file, function, line, col }
     }
 
-    pub fn assert_location<T, U: Into<InternedString>, V: Into<InternedString>>(
+    pub fn property_location<T, U: Into<InternedString>, V: Into<InternedString>>(
         file: U,
         function: Option<V>,
         line: T,
@@ -142,7 +139,7 @@ impl Location {
         let function = function.intern();
         let property_class = Some(property_name.unwrap().into());
         let comment = Some(comment.unwrap().into());
-        Location::Assert { file, function, line, col, comment, property_class }
+        Location::Property { file, function, line, col, comment, property_class }
     }
 
     pub fn none() -> Location {

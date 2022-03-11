@@ -37,12 +37,6 @@ fn side_effect_irep(kind: IrepId, ops: Vec<Irep>) -> Irep {
         named_sub: vector_map![(IrepId::Statement, Irep::just_id(kind))],
     }
 }
-fn assert_irep(body: &Stmt, mm: &MachineModel) -> Irep {
-
-    code_irep(IrepId::Assert, vec![body.to_irep(mm)])
-        .with_location(body.location(), mm)
-
-}
 fn switch_default_irep(body: &Stmt, mm: &MachineModel) -> Irep {
     code_irep(IrepId::SwitchCase, vec![Irep::nil(), body.to_irep(mm)])
         .with_named_sub(IrepId::Default, Irep::one())
@@ -329,15 +323,13 @@ impl ToIrep for Location {
                 (IrepId::Function, Irep::just_string_id(function_name.to_string())),
             ])
             .with_named_sub_option(IrepId::Line, line.map(Irep::just_int_id)),
-            Location::Loc { file, function, line, col, .. } => {
-                Irep::just_named_sub(vector_map![
-                    (IrepId::File, Irep::just_string_id(file.to_string())),
-                    (IrepId::Line, Irep::just_int_id(*line)),
-                ])
-                .with_named_sub_option(IrepId::Column, col.map(Irep::just_int_id))
-                .with_named_sub_option(IrepId::Function, function.map(Irep::just_string_id))
-            }
-            Location::Assert { file, function, line, col, comment, property_class } => {
+            Location::Loc { file, function, line, col, .. } => Irep::just_named_sub(vector_map![
+                (IrepId::File, Irep::just_string_id(file.to_string())),
+                (IrepId::Line, Irep::just_int_id(*line)),
+            ])
+            .with_named_sub_option(IrepId::Column, col.map(Irep::just_int_id))
+            .with_named_sub_option(IrepId::Function, function.map(Irep::just_string_id)),
+            Location::Property { file, function, line, col, property_class, comment } => {
                 Irep::just_named_sub(vector_map![
                     (IrepId::File, Irep::just_string_id(file.to_string())),
                     (IrepId::Line, Irep::just_int_id(*line)),
@@ -368,10 +360,14 @@ impl ToIrep for Parameter {
 
 impl ToIrep for Stmt {
     fn to_irep(&self, mm: &MachineModel) -> Irep {
-        //
+        // Match Assert in Stmt to add fields to Source Location Irep
         match self.body() {
+            StmtBody::Assert { property_class, msg, cond } => code_irep(
+                IrepId::Assert,
+                vec![cond.to_irep(mm)],
+            )
+            .with_assert_properties(property_class, *msg, self.location(), mm),
             _ => self.body().to_irep(mm).with_location(self.location(), mm),
-            StmtBody::Assert { cond, property_class, msg } => code_irep(IrepId::Assert, vec![cond.to_irep(mm)]).with_assert_properties(property_class, *msg, self.location(), mm)
         }
     }
 }
@@ -384,8 +380,8 @@ impl ToIrep for StmtBody {
             }
             StmtBody::Assert { cond, .. } => {
                 // Handled by ToIrep for stmt as this requires adding location data to IRep
-                unreachable!()
-            },
+                code_irep(IrepId::Assert, vec![cond.to_irep(mm)])
+            }
             StmtBody::Assume { cond } => code_irep(IrepId::Assume, vec![cond.to_irep(mm)]),
             StmtBody::AtomicBlock(stmts) => {
                 let mut irep_stmts = vec![code_irep(IrepId::AtomicBegin, vec![])];

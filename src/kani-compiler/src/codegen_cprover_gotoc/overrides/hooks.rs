@@ -8,12 +8,9 @@
 //! It would be too nasty if we spread around these sort of undocumented hooks in place, so
 //! this module addresses this issue.
 
-use crate::utils::instance_name_starts_with;
-use crate::GotocCtx;
-use cbmc::goto_program::{BuiltinFn, Expr, Location, Stmt, Symbol, Type, PropertyClass};
 use crate::codegen_cprover_gotoc::utils;
 use crate::codegen_cprover_gotoc::GotocCtx;
-use cbmc::goto_program::{BuiltinFn, Expr, Location, Stmt, Symbol, Type};
+use cbmc::goto_program::{BuiltinFn, Expr, Location, PropertyClass, Stmt, Symbol, Type};
 use cbmc::NO_PRETTY_NAME;
 use kani_queries::UserInput;
 use rustc_middle::mir::{BasicBlock, Place};

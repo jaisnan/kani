@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 use self::StmtBody::*;
 use super::{BuiltinFn, Expr, Location};
-use crate::{InternedString, InternString};
+use crate::{InternString, InternedString};
 use std::{fmt::Debug, str::FromStr};
 use tracing::debug;
 
@@ -30,14 +30,13 @@ pub enum PropertyClass {
 }
 
 impl FromStr for PropertyClass {
-
     type Err = &'static str;
 
     fn from_str(input: &str) -> Result<PropertyClass, Self::Err> {
         match input {
-            "expect_fail"  => Ok(PropertyClass::ExpectFail),
-            "unsupported_struct"  => Ok(PropertyClass::UnsupportedStructs),
-            "assertion"  => Ok(PropertyClass::DefaultAssertion),
+            "expect_fail" => Ok(PropertyClass::ExpectFail),
+            "unsupported_struct" => Ok(PropertyClass::UnsupportedStructs),
+            "assertion" => Ok(PropertyClass::DefaultAssertion),
             _ => Err("No such property class"),
         }
     }
@@ -48,7 +47,7 @@ impl PropertyClass {
         match self {
             PropertyClass::ExpectFail => "expect_fail",
             PropertyClass::UnsupportedStructs => "unsupported_struct",
-            PropertyClass::DefaultAssertion => "assertion"
+            PropertyClass::DefaultAssertion => "assertion",
         }
     }
 }
@@ -75,8 +74,8 @@ pub enum StmtBody {
     /// `assert(cond)`
     Assert {
         cond: Expr,
-        msg: InternedString,
         property_class: PropertyClass,
+        msg: InternedString,
     },
     /// `__CPROVER_assume(cond);`
     Assume {
@@ -223,19 +222,31 @@ impl Stmt {
     }
 
     /// `assert(cond);`
-    pub fn assert_stmt(cond: Expr, property_class: PropertyClass, message: &str, loc: Location) -> Self {
+    pub fn assert_stmt(
+        cond: Expr,
+        property_class: PropertyClass,
+        message: &str,
+        loc: Location,
+    ) -> Self {
         assert!(cond.typ().is_bool());
 
         let msg = message.into();
 
-        // match enum of string
-        // let new_loc = if let Location::Loc{file, line, function, col, .. } = loc {
-        //     Location::Assert{file, line, function, col, comment: Some(msg), property_class: Some(prop_class.to_string().intern())}
-        // } else {
-        //     loc
-        // };
+        // Match enum of string
+        let property_location = if let Location::Loc { file, line, function, col, .. } = loc {
+            Location::property_location(
+                file,
+                function,
+                line,
+                col,
+                Some(message.into()),
+                Some(property_class.as_str().to_string().intern()),
+            )
+        } else {
+            loc
+        };
 
-        stmt!(Assert { cond, property_class, msg }, loc)
+        stmt!(Assert { cond, property_class, msg }, property_location)
     }
 
     /// `__CPROVER_assert(cond, msg);`

@@ -4,10 +4,10 @@
 
 use super::super::goto_program::{Location, Type};
 use super::super::MachineModel;
-use crate::InternString;
-use crate::goto_program::PropertyClass;
 use super::{IrepId, ToIrep};
 use crate::cbmc_string::InternedString;
+use crate::goto_program::PropertyClass;
+use crate::InternString;
 use num::BigInt;
 use std::fmt::Debug;
 use vector_map::VecMap;
@@ -71,14 +71,22 @@ impl Irep {
         self.with_named_sub(IrepId::Type, t.to_irep(mm))
     }
 
-    pub fn with_assert_properties(self, property_class: &PropertyClass, msg: InternedString, l : &Location, mm: &MachineModel) -> Self {
+    /// Add Property Class and Message (Description) fields to Source location IRep
+    pub fn with_assert_properties(
+        self,
+        property_class: &PropertyClass,
+        msg: InternedString,
+        l: &Location,
+        mm: &MachineModel,
+    ) -> Self {
         if !l.is_none() {
-            let temp_location_irep = l.to_irep(&mm);
-            temp_location_irep.with_named_sub_option(IrepId::Comment, Some(Irep::just_string_id(msg)))
-            .with_named_sub_option(
-                IrepId::PropertyClass,
-                Some(Irep::just_string_id(property_class.as_str())),
-            )
+            let temp_location_irep = self.with_location(l, mm);
+            temp_location_irep
+                .with_named_sub(IrepId::Comment, Irep::just_string_id(msg))
+                .with_named_sub(
+                    IrepId::PropertyClass,
+                    Irep::just_string_id(property_class.as_str()),
+                )
         } else {
             self
         }
