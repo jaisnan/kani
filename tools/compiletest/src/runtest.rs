@@ -320,8 +320,7 @@ impl<'test> TestCx<'test> {
             .args(["--function", function_name])
             .arg("--target-dir")
             .arg(self.output_base_dir().join("target"))
-            .arg("--crate")
-            .arg(&parent_dir);
+            .current_dir(&parent_dir);
         self.add_kani_dir_to_path(&mut cargo);
         let proc_res = self.compose_and_run(cargo);
         let expected = fs::read_to_string(self.testpaths.file.clone()).unwrap();
@@ -343,9 +342,8 @@ impl<'test> TestCx<'test> {
             kani.env("RUSTFLAGS", self.props.compile_flags.join(" "));
         }
         // Pass the test path along with Kani and CBMC flags parsed from comments at the top of the test file.
-        kani.args(&self.props.kani_flags)
-            .arg("--input")
-            .arg(&self.testpaths.file)
+        kani.arg(&self.testpaths.file)
+            .args(&self.props.kani_flags)
             .arg("--cbmc-args")
             .args(&self.props.cbmc_flags);
         self.add_kani_dir_to_path(&mut kani);
@@ -381,23 +379,69 @@ impl<'test> TestCx<'test> {
     fn verify_output(&self, proc_res: &ProcRes, expected: &str) {
         // Include the output from stderr here for cases where there are exceptions
         let output = proc_res.stdout.to_string() + &proc_res.stderr;
-        if let Some(line) = TestCx::contains_lines(&output, expected.split('\n').collect()) {
+        if let Some(lines) =
+            TestCx::contains_lines(&output.split('\n').collect(), expected.split('\n').collect())
+        {
             self.fatal_proc_rec(
-                &format!("test failed: expected output to contain the line: {}", line),
+                &format!(
+                    "test failed: expected output to contain the line(s):\n{}",
+                    lines.join("\n")
+                ),
                 &proc_res,
             );
         }
     }
 
-    /// Looks for each line in `str`. Returns `None` if all lines are in `str`.
-    /// Otherwise, it returns the first line not found in `str`.
-    fn contains_lines<'a>(str: &str, lines: Vec<&'a str>) -> Option<&'a str> {
+    /// Looks for each line or set of lines in `str`. Returns `None` if all
+    /// lines are in `str`.  Otherwise, it returns the first line not found in
+    /// `str`.
+    fn contains_lines<'a>(str: &Vec<&str>, lines: Vec<&'a str>) -> Option<Vec<&'a str>> {
+        let mut consecutive_lines: Vec<&str> = Vec::new();
         for line in lines {
-            if !str.contains(line) {
-                return Some(line);
+            // A line that ends in "\" indicates that the next line in the
+            // expected file should appear on the consecutive line in the
+            // output. This is a temporary mechanism until we have more robust
+            // json-based checking of verification results
+            if let Some(prefix) = line.strip_suffix("\\") {
+                // accumulate the lines
+                consecutive_lines.push(prefix);
+            } else {
+                consecutive_lines.push(line);
+                if !TestCx::contains(&str, &consecutive_lines) {
+                    return Some(consecutive_lines);
+                }
+                consecutive_lines.clear();
             }
         }
         None
+    }
+
+    /// Check if there is a set of consecutive lines in `str` where each line
+    /// contains a line from `lines`
+    fn contains(str: &Vec<&str>, lines: &Vec<&str>) -> bool {
+        let mut i = str.iter();
+        while let Some(output_line) = i.next() {
+            if output_line.contains(&lines[0]) {
+                // Check if the rest of the lines in `lines` are contained in
+                // the subsequent lines in `str`
+                let mut matches = true;
+                // Clone the iterator so that we keep i unchanged
+                let mut j = i.clone();
+                for i in 1..lines.len() {
+                    if let Some(output_line) = j.next() {
+                        if output_line.contains(lines[i]) {
+                            continue;
+                        }
+                    }
+                    matches = false;
+                    break;
+                }
+                if matches {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     fn create_stamp(&self) {

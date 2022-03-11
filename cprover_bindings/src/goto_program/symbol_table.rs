@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 use super::super::{env, MachineModel};
-use super::{BuiltinFn, DatatypeComponent, Stmt, Symbol, Type};
+use super::{BuiltinFn, Stmt, Symbol};
 use crate::InternedString;
 use std::collections::BTreeMap;
 /// This is a typesafe implementation of the CBMC symbol table, based on the CBMC code at:
@@ -94,44 +94,6 @@ impl SymbolTable {
     pub fn lookup<T: Into<InternedString>>(&self, name: T) -> Option<&Symbol> {
         let name = name.into();
         self.symbol_table.get(&name)
-    }
-
-    pub fn lookup_components(&self, aggr_name: InternedString) -> Option<&Vec<DatatypeComponent>> {
-        self.lookup(aggr_name).and_then(|x| x.typ.components())
-    }
-
-    pub fn lookup_components_in_type(&self, base_type: &Type) -> Option<&Vec<DatatypeComponent>> {
-        base_type.type_name().and_then(|aggr_name| self.lookup_components(aggr_name))
-    }
-
-    /// If aggr_name.field_name exists in the symbol table, return Some(field_type),
-    /// otherwise, return none.
-    pub fn lookup_field_type(
-        &self,
-        aggr_name: InternedString,
-        field_name: InternedString,
-    ) -> Option<&Type> {
-        self.lookup_components(aggr_name)
-            .and_then(|fields| fields.iter().find(|&field| field.name() == field_name))
-            .and_then(|field| field.field_typ())
-    }
-
-    /// If aggr_name.field_name exists in the symbol table, return Some(field_type),
-    /// otherwise, return none.
-    pub fn lookup_field_type_in_type<T: Into<InternedString>>(
-        &self,
-        base_type: &Type,
-        field_name: T,
-    ) -> Option<&Type> {
-        let field_name = field_name.into();
-        base_type.type_name().and_then(|aggr_name| self.lookup_field_type(aggr_name, field_name))
-    }
-
-    pub fn lookup_fields_in_type(&self, base_type: &Type) -> Option<&Vec<DatatypeComponent>> {
-        base_type
-            .type_name()
-            .and_then(|aggr_name| self.lookup(aggr_name))
-            .and_then(|x| x.typ.components())
     }
 
     pub fn machine_model(&self) -> &MachineModel {

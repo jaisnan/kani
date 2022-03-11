@@ -20,9 +20,11 @@ functions:
 """
 
 import json
-from colorama import Fore, Style
+import os
 import re
 import sys
+
+from colorama import Fore, Style
 from enum import Enum
 
 # Enum to store the style of output that is given by the argument flags
@@ -57,13 +59,18 @@ def main():
         print("Json File Input Missing")
         sys.exit(1)
 
+    if len(sys.argv) == 3:
+        output_style = output_style_switcher[sys.argv[2]]
+    else:
+        output_style = "regular"
+
     # parse the input json file
     with open(sys.argv[1]) as f:
         sample_json_file_parsing = f.read()
 
     # the main function should take a json file as input
-    transform_cbmc_output(sample_json_file_parsing, output_style=output_style_switcher["old"])
-    return
+    return_code = transform_cbmc_output(sample_json_file_parsing, output_style=output_style)
+    sys.exit(return_code)
 
 def transform_cbmc_output(cbmc_response_string, output_style):
     """
@@ -115,9 +122,9 @@ def transform_cbmc_output(cbmc_response_string, output_style):
         print(messages)
 
     else:
-        # DynTrait tests generate a non json output due to "Invariant check failed" error
-        # For these cases, we just produce the cbmc output unparsed
-        # TODO: Parse these non json outputs from CBMC
+        # When CBMC crashes or does not produce json output, print the response
+        # string to allow us to debug
+        print(cbmc_response_string)
         raise Exception("CBMC Crashed - Unable to present Result")
 
     return num_failed > 0
@@ -198,9 +205,11 @@ def postprocess_results(properties):
     has_failed_unwinding_asserts = has_check_failure(properties, GlobalMessages.UNWINDING_ASSERT_DESC)
     properties, reach_checks = filter_reach_checks(properties)
     annotate_properties_with_reach_results(properties, reach_checks)
+    remove_check_ids_from_description(properties)
 
     for property in properties:
-        if has_reachable_unsupported_constructs:
+        property["description"] = get_readable_description(property)
+        if has_reachable_unsupported_constructs or has_failed_unwinding_asserts:
             # Change SUCCESS to UNDETERMINED for all properties
             if property["status"] == "SUCCESS":
                 property["status"] = "UNDETERMINED"
@@ -208,13 +217,15 @@ def postprocess_results(properties):
             # Change SUCCESS to UNREACHABLE
             assert property["status"] == "SUCCESS", "** ERROR: Expecting an unreachable property to have a status of \"SUCCESS\""
             property["status"] = "UNREACHABLE"
-        # TODO: Handle unwinding assertion failure
 
     messages = ""
     if has_reachable_unsupported_constructs:
         messages += "** WARNING: A Rust construct that is not currently supported " \
                     "by Kani was found to be reachable. Check the results for " \
                     "more details."
+    if has_failed_unwinding_asserts:
+        messages += "[Kani] info: Verification output shows one or more unwinding failures.\n" \
+                    "[Kani] tip: Consider increasing the unwinding value or disabling `--unwinding-assertions`.\n"
 
     return properties, messages
 
@@ -247,6 +258,142 @@ def filter_properties(properties, message):
             filtered_properties.append(property)
     return filtered_properties, removed_properties
 
+class CProverCheck:
+    """ Represents a CProverCheck and provides methods to replace the check.
+
+        Objects of this class are used to represent specific types of CBMC's
+        check messages. It allow us to identify and to replace them by a more
+        user friendly message.
+
+        That includes rewriting them and removing information that don't
+        make sense in the ust context. E.g.:
+        - Original CBMC message: "dead object in OBJECT_SIZE(&temp_0)"
+                     Not in the original code -> ^^^^^^^^^^^^^^^^^^^^
+        - New message: "pointer to dead object"
+    """
+
+    def __init__(self, msg, new_msg=None):
+        self.original = msg
+        self.kani_msg = new_msg if new_msg else msg
+
+    def matches(self, msg):
+        return self.original in msg
+
+    def replace(self, msg):
+        return self.kani_msg
+
+
+CBMC_DESCRIPTIONS = {
+    "error_label": [],
+    "division-by-zero": [CProverCheck("division by zero")],
+    "enum-range-check": [CProverCheck("enum range check")],
+    "undefined-shift": [CProverCheck("shift distance is negative"),
+                        CProverCheck("shift distance too large"),
+                        CProverCheck("shift operand is negative"),
+                        CProverCheck("shift of non-integer type")],
+    "overflow": [
+        CProverCheck("result of signed mod is not representable"),
+        CProverCheck("arithmetic overflow on signed type conversion"),
+        CProverCheck("arithmetic overflow on signed division"),
+        CProverCheck("arithmetic overflow on signed unary minus"),
+        CProverCheck("arithmetic overflow on signed shl"),
+        CProverCheck("arithmetic overflow on unsigned unary minus"),
+        CProverCheck("arithmetic overflow on signed +", "arithmetic overflow on signed addition"),
+        CProverCheck("arithmetic overflow on signed -", "arithmetic overflow on signed subtraction"),
+        CProverCheck("arithmetic overflow on signed *", "arithmetic overflow on signed multiplication"),
+        CProverCheck("arithmetic overflow on unsigned +", "arithmetic overflow on unsigned addition"),
+        CProverCheck("arithmetic overflow on unsigned -", "arithmetic overflow on unsigned subtraction"),
+        CProverCheck("arithmetic overflow on unsigned *", "arithmetic overflow on unsigned multiplication"),
+        CProverCheck("arithmetic overflow on floating-point typecast"),
+        CProverCheck("arithmetic overflow on floating-point division"),
+        CProverCheck("arithmetic overflow on floating-point addition"),
+        CProverCheck("arithmetic overflow on floating-point subtraction"),
+        CProverCheck("arithmetic overflow on floating-point multiplication"),
+        CProverCheck("arithmetic overflow on unsigned to signed type conversion"),
+        CProverCheck("arithmetic overflow on float to signed integer type conversion"),
+        CProverCheck("arithmetic overflow on signed to unsigned type conversion"),
+        CProverCheck("arithmetic overflow on unsigned to unsigned type conversion"),
+        CProverCheck("arithmetic overflow on float to unsigned integer type conversion")],
+    "NaN": [
+        CProverCheck("NaN on +", "NaN on addition"),
+        CProverCheck("NaN on -", "NaN on subtraction"),
+        CProverCheck("NaN on /", "NaN on division"),
+        CProverCheck("NaN on *", "NaN on multiplication")],
+    "pointer": [
+        CProverCheck("same object violation")],
+    "pointer_arithmetic": [
+        CProverCheck("pointer relation: deallocated dynamic object"),
+        CProverCheck("pointer relation: dead object"),
+        CProverCheck("pointer relation: pointer NULL"),
+        CProverCheck("pointer relation: pointer invalid"),
+        CProverCheck("pointer relation: pointer outside dynamic object bounds"),
+        CProverCheck("pointer relation: pointer outside object bounds"),
+        CProverCheck("pointer relation: invalid integer address"),
+        CProverCheck("pointer arithmetic: deallocated dynamic object"),
+        CProverCheck("pointer arithmetic: dead object"),
+        CProverCheck("pointer arithmetic: pointer NULL"),
+        CProverCheck("pointer arithmetic: pointer invalid"),
+        CProverCheck("pointer arithmetic: pointer outside dynamic object bounds"),
+        CProverCheck("pointer arithmetic: pointer outside object bounds"),
+        CProverCheck("pointer arithmetic: invalid integer address")],
+    "pointer_dereference": [
+        CProverCheck("dereferenced function pointer must be", "dereference failure: invalid function pointer"),
+        CProverCheck("dereference failure: pointer NULL"),
+        CProverCheck("dereference failure: pointer invalid"),
+        CProverCheck("dereference failure: deallocated dynamic object"),
+        CProverCheck("dereference failure: dead object"),
+        CProverCheck("dereference failure: pointer outside dynamic object bounds"),
+        CProverCheck("dereference failure: pointer outside object bounds"),
+        CProverCheck("dereference failure: invalid integer address")],
+    "pointer_primitives": [
+        # These are very hard to understand without more context.
+        CProverCheck("pointer invalid"),
+        CProverCheck("deallocated dynamic object", "pointer to deallocated dynamic object"),
+        CProverCheck("dead object", "pointer to dead object"),
+        CProverCheck("pointer outside dynamic object bounds"),
+        CProverCheck("pointer outside object bounds"),
+        CProverCheck("invalid integer address")
+    ],
+    "array_bounds": [
+        CProverCheck("lower bound", "index out of bounds"),  # Irrelevant check. Only usize allowed as index.
+        # This one is redundant:
+        # CProverCheck("dynamic object upper bound", "access out of bounds"),
+        CProverCheck("upper bound", "index out of bounds: the length is less than or equal to the given index"), ],
+    "bit_count": [
+        CProverCheck("count trailing zeros is undefined for value zero"),
+        CProverCheck("count leading zeros is undefined for value zero")],
+    "memory-leak": [
+        CProverCheck("dynamically allocated memory never freed")],
+    # These pre-conditions should not print temporary variables since they are embedded in the libc implementation.
+    # They are added via __CPROVER_precondition.
+    # "precondition_instance": [],
+}
+
+def get_readable_description(prop):
+    """This function will return a user friendly property description.
+
+       For CBMC checks, it will ensure that the failure does not include any
+       temporary variable.
+    """
+    original = prop["description"]
+    # Id is structured as [<function>.]<property_class>.<counter>
+    prop_class = prop["property"].rsplit(".", 3)
+    # Do nothing if prop_class is diff than cbmc's convention
+    class_id = prop_class[-2] if len(prop_class) > 1 else None
+    if class_id in CBMC_DESCRIPTIONS:
+        # Contains a list for potential message translation [String].
+        prop_type = [check.replace(original) for check in CBMC_DESCRIPTIONS[class_id] if check.matches(original)]
+        if len(prop_type) != 1:
+            if "KANI_FAIL_ON_UNEXPECTED_DESCRIPTION" in os.environ:
+                print(f"Unexpected description: {original}\n"
+                      f"  - class_id: {class_id}\n"
+                      f"  - matches: {prop_type}\n")
+                exit(1)
+            else:
+                return original
+        else:
+            return prop_type[0]
+    return original
 
 def annotate_properties_with_reach_results(properties, reach_checks):
     """
@@ -276,9 +423,6 @@ def annotate_properties_with_reach_results(properties, reach_checks):
         prop = get_matching_property(properties, check_id)
         # Attach the result of the reachability check to this property
         prop[GlobalMessages.REACH_CHECK_KEY] = reach_check["status"]
-        # Remove the ID from the property's description so that it's not shown
-        # to the user
-        prop["description"] = prop["description"].replace("[" + check_id + "] ", "", 1)
 
 
 def get_matching_property(properties, check_id):
@@ -289,6 +433,26 @@ def get_matching_property(properties, check_id):
         if check_id in property["description"]:
             return property
     raise Exception("Error: failed to find a property with ID \"" + check_id + "\"")
+
+
+def remove_check_ids_from_description(properties):
+    """
+    Some asserts generated by Kani have a unique ID in their description that is
+    of the form:
+
+    [KANI_CHECK_ID_<crate-fn-name>_<index>]
+
+    e.g.:
+
+    [KANI_CHECK_ID_foo.6875c808::foo_0] assertion failed: x % 2 == 0
+
+    This function removes those IDs from the property's description so that
+    they're not shown to the user. The removal of the IDs should only be done
+    after all ID-based post-processing is done.
+    """
+    check_id_pattern = re.compile(r"\[" + GlobalMessages.CHECK_ID + r"_.*_[0-9]*\] ")
+    for property in properties:
+        property["description"] = re.sub(check_id_pattern, "", property["description"])
 
 
 def construct_solver_information_message(solver_information):
@@ -367,11 +531,11 @@ def construct_terse_property_message(properties):
 
     # The Verification is successful and the program is verified
     if number_tests_failed == 0:
-        verification_status = Fore.GREEN + "SUCCESSFUL" + Style.RESET_ALL
+        verification_status = colored_text(Fore.GREEN, "SUCCESSFUL")
     else:
         # Go through traces to extract relevant information to be displayed in the summary
         # only in the case of failure
-        verification_status = Fore.RED + "FAILED" + Style.RESET_ALL
+        verification_status = colored_text(Fore.RED, "FAILED")
         for failed_test in failed_tests:
             try:
                 failure_message = failed_test["description"]
@@ -412,6 +576,8 @@ def construct_property_message(properties):
     """
 
     number_tests_failed = 0
+    number_tests_unreachable = 0
+    number_tests_undetermined = 0
     output_message = ""
     failed_tests = []
     index = 0
@@ -429,13 +595,17 @@ def construct_property_message(properties):
             print("Key not present in json property", e)
 
         if status == "SUCCESS":
-            message = Fore.GREEN + f"{status}" + Style.RESET_ALL
-        elif status == "UNDETERMINED" or status == "UNREACHABLE":
-            message = Fore.YELLOW + f"{status}" + Style.RESET_ALL
+            message = colored_text(Fore.GREEN, f"{status}")
+        elif status == "UNDETERMINED":
+            message = colored_text(Fore.YELLOW, f"{status}")
+            number_tests_undetermined += 1
+        elif status == "UNREACHABLE":
+            message = colored_text(Fore.YELLOW, f"{status}")
+            number_tests_unreachable += 1
         else:
             number_tests_failed += 1
             failed_tests.append(property_instance)
-            message = Fore.RED + f"{status}" + Style.RESET_ALL
+            message = colored_text(Fore.RED, f"{status}")
 
         """ Ex - Property 54: calloc.assertion.1
          - Status: SUCCESS
@@ -443,13 +613,23 @@ def construct_property_message(properties):
         output_message += f"Check {index+1}: {name}\n\t - Status: " + \
             message + f"\n\t - Description: \"{description}\"\n" + "\n"
 
-    output_message += f"\nSUMMARY: \n ** {number_tests_failed} of {index+1} failed\n"
+    output_message += f"\nSUMMARY: \n ** {number_tests_failed} of {index+1} failed"
+    other_status = []
+    if number_tests_undetermined > 0:
+        other_status.append(f"{number_tests_undetermined} undetermined")
+    if number_tests_unreachable > 0:
+        other_status.append(f"{number_tests_unreachable} unreachable")
+    if other_status:
+        output_message += " ("
+        output_message += ",".join(other_status)
+        output_message += ")"
+    output_message += "\n"
 
     # The Verification is successful and the program is verified
     if number_tests_failed == 0:
-        verification_status = Fore.GREEN + "SUCCESSFUL" + Style.RESET_ALL
+        verification_status = colored_text(Fore.GREEN, "SUCCESSFUL")
     else:
-        verification_status = Fore.RED + "FAILED" + Style.RESET_ALL
+        verification_status = colored_text(Fore.RED, "FAILED")
         for failed_test in failed_tests:
             # Go through traces to extract relevant information to be displayed in the summary
             # only in the case of failure
@@ -469,6 +649,16 @@ def construct_property_message(properties):
     output_message += f"\nVERIFICATION:- {verification_status}\n"
 
     return output_message, number_tests_failed
+
+def colored_text(color, text):
+    """
+    Only use colored text if running in a terminal to avoid dumping escape
+    characters
+    """
+    if sys.stdout.isatty():
+        return color + text + Style.RESET_ALL
+    else:
+        return text
 
 
 if __name__ == "__main__":

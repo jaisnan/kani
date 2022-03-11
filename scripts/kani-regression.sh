@@ -13,9 +13,14 @@ export PATH=$SCRIPT_DIR:$PATH
 EXTRA_X_PY_BUILD_ARGS="${EXTRA_X_PY_BUILD_ARGS:-}"
 KANI_DIR=$SCRIPT_DIR/..
 
+# This variable forces an error when there is a mismatch on the expected
+# descriptions from cbmc checks.
+# TODO: We should add a more robust mechanism to detect python unexpected behavior.
+export KANI_FAIL_ON_UNEXPECTED_DESCRIPTION="true"
+
 # Required dependencies
 check-cbmc-version.py --major 5 --minor 50
-check-cbmc-viewer-version.py --major 2 --minor 5
+check-cbmc-viewer-version.py --major 2 --minor 10
 
 # Formatting check
 ${SCRIPT_DIR}/kani-fmt.sh --check
@@ -26,6 +31,7 @@ cargo build
 # Unit tests
 cargo test -p cprover_bindings
 cargo test -p kani-compiler
+cargo test -p cargo-kani
 
 # Declare testing suite information (suite and mode)
 TESTS=(
