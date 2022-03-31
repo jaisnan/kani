@@ -10,16 +10,28 @@ pub enum Location {
     /// Unknown source location
     None,
     /// Code is in a builtin function
-    BuiltinFunction { function_name: InternedString, line: Option<u64> },
+    BuiltinFunction {
+        function_name: InternedString,
+        line: Option<u64>,
+    },
     /// Location in user code.
     /// `function` is `None` for global, `Some(function_name)` for function local.
-    Loc { file: InternedString, function: Option<InternedString>, line: u64, col: Option<u64> },
+    Loc {
+        file: InternedString,
+        function: Option<InternedString>,
+        line: u64,
+        col: Option<u64>,
+    },
     /// Location for Statements that use Property Class and Description - Assert, Assume, Cover etc.
     Property {
         file: InternedString,
         function: Option<InternedString>,
         line: u64,
         col: Option<u64>,
+        comment: InternedString,
+        property_class: InternedString,
+    },
+    NoneProperty {
         comment: InternedString,
         property_class: InternedString,
     },
@@ -70,6 +82,7 @@ impl Location {
             Location::Property { file, line, .. } => {
                 format!("<{:?}>:{}", file, line)
             }
+            Location::NoneProperty { .. } => "<none>".to_string(),
         }
     }
 }
@@ -140,7 +153,11 @@ impl Location {
                 property_name.into(),
             ),
             Location::Property { .. } => location,
-            Location::None => location,
+            Location::NoneProperty { .. } => location,
+            Location::None => Location::NoneProperty {
+                comment: comment.into(),
+                property_class: property_name.into(),
+            },
         }
     }
 
