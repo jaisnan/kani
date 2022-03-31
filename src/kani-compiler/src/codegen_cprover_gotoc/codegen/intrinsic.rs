@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //! this module handles intrinsics
+use super::PropertyClass;
 use crate::codegen_cprover_gotoc::GotocCtx;
 use cbmc::goto_program::{BuiltinFn, Expr, Location, Stmt, Type};
 use rustc_middle::mir::Place;
@@ -164,11 +165,17 @@ impl<'tcx> GotocCtx<'tcx> {
                 let a = fargs.remove(0);
                 let b = fargs.remove(0);
                 let res = a.$f(b);
-                let check = Stmt::assert(
+                let check = self.codegen_assert(
                     res.overflowed.not(),
+                    PropertyClass::DefaultAssertion,
                     format!("attempt to compute {} which would overflow", intrinsic).as_str(),
                     loc,
                 );
+                // let check = Stmt::assert(
+                //     res.overflowed.not(),
+                //     format!("attempt to compute {} which would overflow", intrinsic).as_str(),
+                //     loc,
+                // );
                 let expr_place = self.codegen_expr_to_place(p, res.result);
                 Stmt::block(vec![expr_place, check], loc)
             }};
@@ -196,11 +203,17 @@ impl<'tcx> GotocCtx<'tcx> {
                         }
                     }
                 }
-                let check_stmt = Stmt::assert(
+                let check_stmt = self.codegen_assert(
                     check.not(),
+                    PropertyClass::DefaultAssertion,
                     format!("attempt to compute {} which would overflow", intrinsic).as_str(),
                     loc,
                 );
+                // let check_stmt = Stmt::assert(
+                //     check.not(),
+                //     format!("attempt to compute {} which would overflow", intrinsic).as_str(),
+                //     loc,
+                // );
                 let res = a.$op(b);
                 let expr_place = self.codegen_expr_to_place(p, res);
                 Stmt::block(vec![expr_place, check_stmt], loc)
@@ -317,7 +330,13 @@ impl<'tcx> GotocCtx<'tcx> {
             // Informs the optimizer that a condition is always true.
             // If the condition is false, the behavior is undefined.
             "assume" => {
-                Stmt::assert(fargs.remove(0).cast_to(Type::bool()), "assumption failed", loc)
+                self.codegen_assert(
+                    fargs.remove(0).cast_to(Type::bool()),
+                    PropertyClass::Assume,
+                    "assumption failed",
+                    loc,
+                )
+                // Stmt::assert(fargs.remove(0).cast_to(Type::bool()), "assumption failed", loc)
             }
             "atomic_and" => codegen_atomic_binop!(bitand),
             "atomic_and_acq" => codegen_atomic_binop!(bitand),
@@ -533,7 +552,12 @@ impl<'tcx> GotocCtx<'tcx> {
             }
             "unchecked_sub" => codegen_op_with_overflow_check!(sub_overflow),
             "unlikely" => self.codegen_expr_to_place(p, fargs.remove(0)),
-            "unreachable" => Stmt::assert_false("unreachable", loc),
+            "unreachable" => self.codegen_assert(
+                Expr::bool_false(),
+                PropertyClass::DefaultAssertion,
+                "unreachable",
+                loc,
+            ),
             "volatile_copy_memory" => codegen_intrinsic_copy!(Memmove),
             "volatile_copy_nonoverlapping_memory" => codegen_intrinsic_copy!(Memcpy),
             "volatile_load" => self.codegen_expr_to_place(p, fargs.remove(0).dereference()),
@@ -579,8 +603,20 @@ impl<'tcx> GotocCtx<'tcx> {
         let msg1 = format!("first argument for {} is finite", intrinsic);
         let msg2 = format!("second argument for {} is finite", intrinsic);
         let loc = self.codegen_span_option(span);
-        let finite_check1 = Stmt::assert(arg1.is_finite(), msg1.as_str(), loc.clone());
-        let finite_check2 = Stmt::assert(arg2.is_finite(), msg2.as_str(), loc.clone());
+        let finite_check1 = self.codegen_assert(
+            arg1.is_finite(),
+            PropertyClass::DefaultAssertion,
+            msg1.as_str(),
+            loc.clone(),
+        );
+        let finite_check2 = self.codegen_assert(
+            arg2.is_finite(),
+            PropertyClass::DefaultAssertion,
+            msg2.as_str(),
+            loc.clone(),
+        );
+        // let finite_check1 = Stmt::assert(arg1.is_finite(), msg1.as_str(), loc.clone());
+        // let finite_check2 = Stmt::assert(arg2.is_finite(), msg2.as_str(), loc.clone());
         Stmt::block(vec![finite_check1, finite_check2, stmt], loc)
     }
 
@@ -604,12 +640,23 @@ impl<'tcx> GotocCtx<'tcx> {
         let division_does_not_overflow = dividend_is_int_min.and(divisor_is_minus_one).not();
         Stmt::block(
             vec![
-                Stmt::assert(division_is_exact, "exact_div arguments divide exactly", loc.clone()),
-                Stmt::assert(divisor_is_nonzero, "exact_div divisor is nonzero", loc.clone()),
-                Stmt::assert(
+                self.codegen_assert(
+                    division_is_exact,
+                    PropertyClass::ExactDiv,
+                    "exact_div arguments divide exactly",
+                    loc,
+                ),
+                self.codegen_assert(
+                    divisor_is_nonzero,
+                    PropertyClass::ExactDiv,
+                    "exact_div divisor is nonzero",
+                    loc,
+                ),
+                self.codegen_assert(
                     division_does_not_overflow,
+                    PropertyClass::ExactDiv,
                     "exact_div division does not overflow",
-                    loc.clone(),
+                    loc,
                 ),
                 self.codegen_expr_to_place(p, a.div(b)),
             ],
@@ -775,11 +822,17 @@ impl<'tcx> GotocCtx<'tcx> {
 
         Stmt::block(
             vec![
-                Stmt::assert(
+                self.codegen_assert(
                     pointers_to_same_object,
+                    PropertyClass::PointerOffset,
                     "ptr_offset_from: pointers point to same object",
                     loc.clone(),
                 ),
+                // Stmt::assert(
+                //     pointers_to_same_object,
+                //     "ptr_offset_from: pointers point to same object",
+                //     loc.clone(),
+                // ),
                 self.codegen_expr_to_place(p, a.sub(b)),
             ],
             loc,
@@ -1034,7 +1087,13 @@ impl<'tcx> GotocCtx<'tcx> {
         let src = fargs.remove(0);
         let typ = instance.substs.type_at(0);
         let align = self.is_aligned(typ, dst.clone());
-        let align_check = Stmt::assert(align, "`dst` is properly aligned", loc.clone());
+        let align_check = self.codegen_assert(
+            align,
+            PropertyClass::DefaultAssertion,
+            "`dst` is properly aligned",
+            loc.clone(),
+        );
+        // let align_check = Stmt::assert(align, "`dst` is properly aligned", loc.clone());
         let expr = dst.dereference().assign(src, loc.clone());
         Stmt::block(vec![align_check, expr], loc)
     }
