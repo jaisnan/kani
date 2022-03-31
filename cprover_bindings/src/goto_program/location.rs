@@ -10,18 +10,10 @@ pub enum Location {
     /// Unknown source location
     None,
     /// Code is in a builtin function
-    BuiltinFunction {
-        function_name: InternedString,
-        line: Option<u64>,
-    },
+    BuiltinFunction { function_name: InternedString, line: Option<u64> },
     /// Location in user code.
     /// `function` is `None` for global, `Some(function_name)` for function local.
-    Loc {
-        file: InternedString,
-        function: Option<InternedString>,
-        line: u64,
-        col: Option<u64>,
-    },
+    Loc { file: InternedString, function: Option<InternedString>, line: u64, col: Option<u64> },
     /// Location for Statements that use Property Class and Description - Assert, Assume, Cover etc.
     Property {
         file: InternedString,
@@ -31,10 +23,8 @@ pub enum Location {
         comment: InternedString,
         property_class: InternedString,
     },
-    NoneProperty {
-        comment: InternedString,
-        property_class: InternedString,
-    },
+    /// Covers cases where there are no Location Details but Property Class is needed
+    NoneProperty { comment: InternedString, property_class: InternedString },
 }
 
 /// Getters and predicates
@@ -154,6 +144,8 @@ impl Location {
             ),
             Location::Property { .. } => location,
             Location::NoneProperty { .. } => location,
+            // This converts None type Locations to NoneProperty type which inserts Property Class and Description
+            // into the Source Location Irep's without any location details.
             Location::None => Location::NoneProperty {
                 comment: comment.into(),
                 property_class: property_name.into(),

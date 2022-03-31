@@ -487,7 +487,6 @@ impl<'tcx> GotocCtx<'tcx> {
             &assert_msg,
             loc.clone(),
         );
-        // let assert_nonnull = Stmt::assert(call_is_nonnull, &assert_msg, loc.clone());
 
         // Virtual function call and corresponding nonnull assertion.
         let call = fn_ptr.dereference().call(fargs.to_vec());
