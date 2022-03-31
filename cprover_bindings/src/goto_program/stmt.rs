@@ -202,7 +202,6 @@ impl Stmt {
     }
 
     pub fn assert_false(msg: &str, loc: Location) -> Self {
-        //Stmt::assert(Expr::bool_false(), msg, loc)
         Stmt::assert_statement(Expr::bool_false(), "assertion", msg, loc)
     }
 
