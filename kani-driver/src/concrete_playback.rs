@@ -15,9 +15,10 @@ use std::collections::hash_map::DefaultHasher;
 use std::ffi::OsString;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 use std::process::Command;
+use tempfile;
 
 impl KaniSession {
     /// The main driver for generating concrete playback unit tests and adding them to source code.
@@ -107,20 +108,17 @@ impl KaniSession {
         Ok(())
     }
 
-    /// Writes the new source code to a user's source file using a tempfile as the means.
-    /// Returns whether the unit test was already in the old source code.
+    /// Writes the new source code to a temporary file. Returns whether the unit test was already in the old source code.
     fn add_test_inplace(
         &self,
         source_path: &str,
         proof_harness_end_line: usize,
         unit_test: &UnitTest,
     ) -> Result<bool> {
-        // Read from source
-        let source_file = File::open(source_path).unwrap();
+        let source_file = File::open(source_path)?;
         let source_reader = BufReader::new(source_file);
-
-        // Create temp file
-        let mut temp_file = TempFile::try_new("concrete_playback.tmp")?;
+        let mut temp_file = tempfile::NamedTempFile::new()?;
+        let mut temp_writer = BufWriter::new(&mut temp_file);
         let mut curr_line_num = 0;
 
         // Use a buffered reader/writer to generate the unit test line by line
@@ -132,22 +130,31 @@ impl KaniSession {
                         source_path, unit_test.name,
                     );
                 }
-                // the drop impl will take care of flushing and resetting
+                // temp file gets deleted automatically when function goes out of scope
                 return Ok(true);
             }
             curr_line_num += 1;
-            if let Some(temp_writer) = temp_file.writer.as_mut() {
-                writeln!(temp_writer, "{line}")?;
-                if curr_line_num == proof_harness_end_line {
-                    for unit_test_line in unit_test.code.iter() {
-                        curr_line_num += 1;
-                        writeln!(temp_writer, "{unit_test_line}")?;
-                    }
+            writeln!(temp_writer, "{}", line)?;
+            if curr_line_num == proof_harness_end_line {
+                for unit_test_line in unit_test.code.iter() {
+                    curr_line_num += 1;
+                    writeln!(temp_writer, "{}", unit_test_line)?;
                 }
             }
         }
 
-        temp_file.rename(source_path).expect("Could not rename file");
+        // Flush before we remove/rename the file.
+        temp_writer.flush()?;
+
+        // Have to drop the bufreader to be able to reuse and rename the moved temp file
+        drop(temp_writer);
+
+        // Renames are usually automic, so we won't corrupt the user's source file during a crash.
+        fs::rename(temp_file.path(), source_path).with_context(|| {
+            format!("Couldn't rename tmp source file to actual src file `{source_path}`.")
+        })?;
+
+        // temp file gets deleted automatically by the NamedTempFile handler
         Ok(false)
     }
 
@@ -195,6 +202,11 @@ impl KaniSession {
         }
         Ok(())
     }
+}
+
+struct UnitTest {
+    code: Vec<String>,
+    name: String,
 }
 
 /// Generate a formatted unit test from a list of concrete values.
@@ -257,11 +269,6 @@ fn extract_parent_dir_and_src_file(src_path: &Path) -> Result<(String, String)> 
 struct FileLineRange {
     file: String,
     line_range: Option<(usize, usize)>,
-}
-
-struct UnitTest {
-    code: Vec<String>,
-    name: String,
 }
 
 /// Extract concrete values from the CBMC output processed items.
