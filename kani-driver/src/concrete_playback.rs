@@ -18,7 +18,7 @@ use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 use std::process::Command;
-use tempfile;
+use tempfile::NamedTempFile;
 
 impl KaniSession {
     /// The main driver for generating concrete playback unit tests and adding them to source code.
@@ -117,7 +117,7 @@ impl KaniSession {
     ) -> Result<bool> {
         let source_file = File::open(source_path)?;
         let source_reader = BufReader::new(source_file);
-        let mut temp_file = tempfile::NamedTempFile::new()?;
+        let mut temp_file = NamedTempFile::new()?;
         let mut temp_writer = BufWriter::new(&mut temp_file);
         let mut curr_line_num = 0;
 
@@ -134,11 +134,11 @@ impl KaniSession {
                 return Ok(true);
             }
             curr_line_num += 1;
-            writeln!(temp_writer, "{}", line)?;
+            writeln!(temp_writer, "{line}")?;
             if curr_line_num == proof_harness_end_line {
                 for unit_test_line in unit_test.code.iter() {
                     curr_line_num += 1;
-                    writeln!(temp_writer, "{}", unit_test_line)?;
+                    writeln!(temp_writer, "{unit_test_line}")?;
                 }
             }
         }
