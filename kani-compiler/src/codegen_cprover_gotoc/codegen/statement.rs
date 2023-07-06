@@ -344,7 +344,7 @@ impl<'tcx> GotocCtx<'tcx> {
                         // Non-virtual, direct drop_in_place call
                         assert!(!matches!(drop_instance.def, InstanceDef::Virtual(_, _)));
 
-                        let func = self.codegen_func_expr(drop_instance, None);
+                        let func = self.codegen_func_expr(drop_instance, None).with_location(loc);
                         // The only argument should be a self reference
                         let args = vec![place_ref];
 
@@ -564,7 +564,7 @@ impl<'tcx> GotocCtx<'tcx> {
                     | InstanceDef::CloneShim(..) => {
                         // We need to handle FnDef items in a special way because `codegen_operand` compiles them to dummy structs.
                         // (cf. the function documentation)
-                        let func_exp = self.codegen_func_expr(instance, None);
+                        let func_exp = self.codegen_func_expr(instance, None).with_location(loc);
                         vec![
                             self.codegen_expr_to_place(destination, func_exp.call(fargs))
                                 .with_location(loc),

@@ -6,9 +6,11 @@ use kani_metadata::HarnessMetadata;
 use std::ffi::OsString;
 use std::path::Path;
 use std::process::Command;
+use std::fs::{File};
+use std::io::{self, BufReader, BufWriter, Write, BufRead};
 
 use crate::session::KaniSession;
-use crate::util::{alter_extension, warning};
+use crate::util::{alter_extension};
 
 impl KaniSession {
     /// Run CBMC appropriately to produce 3 output XML files, then run cbmc-viewer on them to produce a report.
@@ -20,12 +22,20 @@ impl KaniSession {
         harness_metadata: &HarnessMetadata,
     ) -> Result<()> {
         let results_filename = alter_extension(file, "results.xml");
+        let coverage_filename = alter_extension(file, "coverage.xml");
         let property_filename = alter_extension(file, "property.xml");
 
         self.record_temporary_file(&results_filename);
+        self.record_temporary_file(&coverage_filename);
         self.record_temporary_file(&property_filename);
 
         self.cbmc_variant(file, &["--xml-ui", "--trace"], &results_filename, harness_metadata)?;
+        self.cbmc_variant(
+            file,
+            &["--xml-ui", "--cover", "location"],
+            &coverage_filename,
+            harness_metadata,
+        )?;
         self.cbmc_variant(
             file,
             &["--xml-ui", "--show-properties"],
@@ -33,9 +43,15 @@ impl KaniSession {
             harness_metadata,
         )?;
 
+        let x: &str = "/Users/jaisnan/Desktop/temp/sample-coverage/coverage5.xml";
+        let y: &str = coverage_filename.as_path().to_str().unwrap();
+        copy_xml_file(y, x).unwrap();
+
         let args: Vec<OsString> = vec![
             "--result".into(),
             results_filename.into(),
+            "--coverage".into(),
+            coverage_filename.into(),
             "--property".into(),
             property_filename.into(),
             "--srcdir".into(),
@@ -52,12 +68,13 @@ impl KaniSession {
         let mut cmd = Command::new("cbmc-viewer");
         cmd.args(args);
 
+        println!("cbmc-viewer args are {:?}", cmd);
+
         self.run_suppress(cmd)?;
 
         // Let the user know
         if !self.args.common_args.quiet {
             println!("Report written to: {}/html/index.html", report_dir.to_string_lossy());
-            warning("coverage information has been disabled for `--visualize` reports");
             // If using VS Code with Remote-SSH, suggest an option for remote viewing:
             if std::env::var("VSCODE_IPC_HOOK_CLI").is_ok()
                 && std::env::var("SSH_CONNECTION").is_ok()
@@ -94,4 +111,19 @@ impl KaniSession {
 
         Ok(())
     }
+}
+
+fn copy_xml_file(source_path: &str, destination_path: &str) -> Result<(), io::Error> {
+    let source_file = File::open(source_path)?;
+    let destination_file = File::create(destination_path)?;
+
+    let reader = BufReader::new(source_file);
+    let mut writer = BufWriter::new(destination_file);
+
+    for line in reader.lines() {
+        let content = line?;
+        writeln!(writer, "{}", content)?;
+    }
+
+    Ok(())
 }

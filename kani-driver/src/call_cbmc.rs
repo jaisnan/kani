@@ -102,6 +102,8 @@ impl KaniSession {
         let mut cmd = Command::new("cbmc");
         cmd.args(args);
 
+        println!("cbmc args are {:?}", cmd);
+
         let result = self.run_redirect(cmd, output)?;
 
         if !result.success() {
