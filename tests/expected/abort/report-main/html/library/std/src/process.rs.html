@@ -1,0 +1,13 @@
+
+<html>
+<head>
+<title>library/std/src/process.rs</title>
+<link rel="stylesheet" type="text/css" href="../../../viewer.css">
+</head>
+
+<body>
+<div class="code">
+<div id="1" class="line none">    1 // Copyright Kani Contributors</div><div id="2" class="line none">    2 // SPDX-License-Identifier: Apache-2.0 OR MIT</div><div id="3" class="line none">    3 </div><div id="4" class="line none">    4 //! This module introduces stubs for process methods.</div><div id="5" class="line none">    5 </div><div id="6" class="line none">    6 // Export everything else from std::process.</div><div id="7" class="line none">    7 pub use std::<a href="lib.rs.html#22">process</a>::*;</div><div id="8" class="line none">    8 </div><div id="9" class="line none">    9 #[inline(always)]</div><div id="10" class="line hit">   10 pub fn <a href="process.rs.html#10">abort</a>() -&gt; ! {</div><div id="11" class="line hit">   11     kani::<a href="../../kani/src/lib.rs.html#209">panic</a>("Function abort() was invoked")</div><div id="12" class="line none">   12 }</div><div id="13" class="line none">   13 </div><div id="14" class="line none">   14 #[inline(always)]</div><div id="15" class="line missed">   15 pub fn <a href="process.rs.html#15">exit</a>(_code: i32) -&gt; ! {</div><div id="16" class="line missed">   16     kani::<a href="../../kani/src/lib.rs.html#209">panic</a>("Function exit() was invoked")</div><div id="17" class="line none">   17 }</div>
+</div>
+</body>
+</html>

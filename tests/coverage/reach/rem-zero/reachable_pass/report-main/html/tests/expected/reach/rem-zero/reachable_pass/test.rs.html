@@ -1,0 +1,13 @@
+
+<html>
+<head>
+<title>tests/expected/reach/rem-zero/reachable_pass/test.rs</title>
+<link rel="stylesheet" type="text/css" href="../../../../../viewer.css">
+</head>
+
+<body>
+<div class="code">
+<div id="1" class="line none">    1 // Copyright Kani Contributors</div><div id="2" class="line none">    2 // SPDX-License-Identifier: Apache-2.0 OR MIT</div><div id="3" class="line none">    3 </div><div id="4" class="line none">    4 // This test checks that kani injects a reachability check for</div><div id="5" class="line none">    5 // remainder-by-zero checks and that it reports ones that are unreachable.</div><div id="6" class="line none">    6 // The check in this test is reachable, so should be reported as SUCCESS</div><div id="7" class="line none">    7 </div><div id="8" class="line hit">    8 fn <a href="test.rs.html#8">rem</a>(x: u16, y: u16) -&gt; u16 {</div><div id="9" class="line both">    9     if y != 0 { x % y } else { 0 }</div><div id="10" class="line hit">   10 }</div><div id="11" class="line none">   11 </div><div id="12" class="line none">   12 #[kani::proof]</div><div id="13" class="line hit">   13 fn <a href="test.rs.html#13">main</a>() {</div><div id="14" class="line hit">   14     <a href="test.rs.html#8">rem</a>(11, 3);</div><div id="15" class="line none">   15 }</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,13 @@
+
+<html>
+<head>
+<title>tests/expected/abort/main.rs</title>
+<link rel="stylesheet" type="text/css" href="../../../viewer.css">
+</head>
+
+<body>
+<div class="code">
+<div id="1" class="line none">    1 // Copyright Kani Contributors</div><div id="2" class="line none">    2 // SPDX-License-Identifier: Apache-2.0 OR MIT</div><div id="3" class="line none">    3 </div><div id="4" class="line none">    4 //! Test that the abort() function is respected and nothing beyond it will execute.</div><div id="5" class="line none">    5 </div><div id="6" class="line none">    6 use std::<a href="../../../library/std/src/lib.rs.html#22">process</a>;</div><div id="7" class="line none">    7 </div><div id="8" class="line none">    8 #[kani::proof]</div><div id="9" class="line hit">    9 fn <a href="main.rs.html#9">main</a>() {</div><div id="10" class="line both">   10     for i in 0..4 {</div><div id="11" class="line hit">   11         if i == 1 {</div><div id="12" class="line none">   12             // This comes first and it should be reachable.</div><div id="13" class="line both">   13             <a href="../../../library/std/src/lib.rs.html#22">process</a>::<a href="../../../library/std/src/process.rs.html#10">abort</a>();</div><div id="14" class="line none">   14         }</div><div id="15" class="line both">   15         if i == 2 {</div><div id="16" class="line none">   16             // This should never happen.</div><div id="17" class="line both">   17             <a href="../../../library/std/src/lib.rs.html#22">process</a>::<a href="../../../library/std/src/process.rs.html#15">exit</a>(1);</div><div id="18" class="line none">   18         }</div><div id="19" class="line none">   19     }</div><div id="20" class="line both">   20     <a href="../../../library/kani/src/lib.rs.html#81">assert</a>!(false, "This is unreachable");</div><div id="21" class="line none">   21 }</div>
+</div>
+</body>
+</html>
