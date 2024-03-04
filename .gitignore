@@ -17,6 +17,7 @@ Session.vim
 .cproject
 .idea
 *.iml
+toolchains/
 .vscode
 .project
 .favorites.json
