@@ -50,4 +50,6 @@ jobs:
       - name: Ensure installation is correct
         run: |
           ls ${{ github.workspace }}/custom_toolchain/
-          echo "${{ github.workspace }}/custom_toolchain" >> $GITHUB_ENV
+
+      - name: Build Kani again, this time expecting a failure
+        run: cargo build-dev
