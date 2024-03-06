@@ -33,6 +33,7 @@ jobs:
           DATE=$(grep 'channel' rust-toolchain.toml | cut -d '=' -f2 | tr -d ' "' | cut -d'-' -f2-)
           echo "Nightly date: $DATE"
           echo "{name}={date}" >> $GITHUB_STATE
+          echo "::save-state name=mystate"
 
       - name: Remove installed Rust toolchain
         run: rustup toolchain remove nightly-${{ steps.extract-date.outputs.date }}
@@ -42,8 +43,7 @@ jobs:
 
       - name: Fetch the nightly tarball
         run: |
-          NIGHTLY_DATE=${{ steps.extract-date.outputs.date }}
-          TOOLCHAIN_URL="https://static.rust-lang.org/dist/${NIGHTLY_DATE}/rust-nightly-x86_64-unknown-linux-gnu.tar.gz"
+          TOOLCHAIN_URL="https://static.rust-lang.org/dist/${{ steps.extract-date.outputs.date }}/rust-nightly-x86_64-unknown-linux-gnu.tar.gz"
           echo "Downloading Rust toolchain from $TOOLCHAIN_URL"
 
           curl --proto '=https' --tlsv1.2 -O $TOOLCHAIN_URL
