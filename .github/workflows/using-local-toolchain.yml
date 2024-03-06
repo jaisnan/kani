@@ -52,4 +52,18 @@ jobs:
           ls ${{ github.workspace }}/custom_toolchain/
           rustup toolchain link custom_toolchain ${{ github.workspace }}/custom_toolchain/
           rustup override set custom_toolchain
-          ${{github.workspace}}/target/kani/bin/cargo-kani --help
+          ${{github.workspace}}/target/kani/bin/cargo-kani setup --use-local-toolchain ${{ github.workspace }}/custom_toolchain/
+
+      - name: Checkout tests
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        # TODO: Customize compiletest to run custom kani. For now, just run a few cargo kani tests.
+        run: |
+          for dir in simple-lib simple-visualize build-rs-works simple-kissat; do
+            >&2 echo "Running test $dir"
+            pushd tests/cargo-kani/$dir
+            cargo kani
+            popd
+          done
+
