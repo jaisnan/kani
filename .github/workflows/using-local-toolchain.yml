@@ -1,0 +1,38 @@
+# Copyright Kani Contributors
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+# 1. Checks --use-local-toolchain
+
+name: Test use-local-toolchain
+on:
+  pull_request:
+  push:
+    # Run on changes to branches but not tags.
+    branches:
+      - '**'
+
+
+jobs:
+  audit:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout Kani
+        uses: actions/checkout@v4
+
+      - name: Setup Kani Dependencies
+        uses: ./.github/actions/setup
+        with:
+          os: ubuntu-20.04
+
+      - name: Build Kani
+        run: cargo build-dev
+
+      - name: Extract nightly version date from rust-toolchain.toml
+        id: extract-date
+        run: |
+          DATE=$(grep 'channel' kani/rust-toolchain.toml | cut -d '=' -f2 | tr -d ' "' | cut -d'-' -f2-)
+          echo "Nightly date: $DATE"
+          echo "::set-output name=date::$DATE"
+
+      - name: Remove installed Rust toolchain
+        run: rustup toolchain remove nightly-${{ steps.extract-date.outputs.date }}
