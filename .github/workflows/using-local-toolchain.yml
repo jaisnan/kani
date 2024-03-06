@@ -32,11 +32,10 @@ jobs:
         run: |
           DATE=$(grep 'channel' rust-toolchain.toml | cut -d '=' -f2 | tr -d ' "' | cut -d'-' -f2-)
           echo "Nightly date: $DATE"
-          echo "{name}={date}" >> $GITHUB_STATE
-          echo "::save-state name=mystate"
+          echo "DATE=$DATE" >> $GITHUB_ENV
 
       - name: Remove installed Rust toolchain
-        run: rustup toolchain remove nightly-${{ steps.extract-date.outputs.date }}
+        run: rustup toolchain remove nightly-$DATE
 
       - name: Create a custom toolchain directory
         run: mkdir -p ${{ github.workspace }}/custom_toolchain
@@ -44,7 +43,7 @@ jobs:
       - name: Fetch the nightly tarball
         run: |
           echo "Downloading Rust toolchain from rust server."
-          curl --proto '=https' --tlsv1.2 -O https://static.rust-lang.org/dist/${{ steps.extract-date.outputs.date }}/rust-nightly-x86_64-unknown-linux-gnu.tar.gz
+          curl --proto '=https' --tlsv1.2 -O https://static.rust-lang.org/dist/$DATE/rust-nightly-x86_64-unknown-linux-gnu.tar.gz
           tar -xzf rust-nightly-x86_64-unknown-linux-gnu.tar.gz
           ./rust-nightly-x86_64-unknown-linux-gnu/install.sh --prefix=${{ github.workspace }}/custom_toolchain
 
