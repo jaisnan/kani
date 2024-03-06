@@ -52,4 +52,4 @@ jobs:
           ls ${{ github.workspace }}/custom_toolchain/
           rustup toolchain link custom_toolchain ${{ github.workspace }}/custom_toolchain/
           rustup override set custom_toolchain
-          ${{github.workspace}}/kani/target/kani/bin/cargo-kani --help
+          ${{github.workspace}}/target/kani/bin/cargo-kani --help
