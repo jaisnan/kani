@@ -32,7 +32,7 @@ jobs:
         run: |
           DATE=$(grep 'channel' rust-toolchain.toml | cut -d '=' -f2 | tr -d ' "' | cut -d'-' -f2-)
           echo "Nightly date: $DATE"
-          echo "::set-output name=date::$DATE"
+          echo "{name}={date}" >> $GITHUB_STATE
 
       - name: Remove installed Rust toolchain
         run: rustup toolchain remove nightly-${{ steps.extract-date.outputs.date }}
