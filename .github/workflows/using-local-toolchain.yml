@@ -52,6 +52,4 @@ jobs:
           ls ${{ github.workspace }}/custom_toolchain/
           rustup toolchain link custom_toolchain ${{ github.workspace }}/custom_toolchain/
           rustup override set custom_toolchain
-
-      - name: Build Kani again, this time expecting a failure
-        run: cargo build-dev
+          ${{github.workspace}}/kani/target/kani/bin/cargo-kani --help
