@@ -49,5 +49,5 @@ jobs:
 
       - name: Ensure installation is correct
         run: |
-          ll ${{ github.workspace }}/custom_toolchain/
-          echo "${{ github.workspace }}/custom_toolchain" >> $GITHUB_STATE
+          ls ${{ github.workspace }}/custom_toolchain/
+          echo "${{ github.workspace }}/custom_toolchain" >> $GITHUB_ENV
