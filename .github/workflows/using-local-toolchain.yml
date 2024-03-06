@@ -30,7 +30,7 @@ jobs:
       - name: Extract nightly version date from rust-toolchain.toml
         id: extract-date
         run: |
-          DATE=$(grep 'channel' kani/rust-toolchain.toml | cut -d '=' -f2 | tr -d ' "' | cut -d'-' -f2-)
+          DATE=$(grep 'channel' rust-toolchain.toml | cut -d '=' -f2 | tr -d ' "' | cut -d'-' -f2-)
           echo "Nightly date: $DATE"
           echo "::set-output name=date::$DATE"
 
