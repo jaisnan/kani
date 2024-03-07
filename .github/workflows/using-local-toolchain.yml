@@ -56,7 +56,7 @@ jobs:
           ${{github.workspace}}/target/kani/bin/cargo-kani setup --use-local-toolchain ${{ github.workspace }}/custom_toolchain/
 
       - name: Ensure that the rustup toolchain is not present
-          ls -la ~/.rustup/toolchains/
+        run: ls -la ~/.rustup/toolchains/
 
       - name: Run tests
         # TODO: Customize compiletest to run custom kani. For now, just run a few cargo kani tests.
