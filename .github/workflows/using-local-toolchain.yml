@@ -52,6 +52,7 @@ jobs:
           ls ${{ github.workspace }}/custom_toolchain/
           rustup toolchain link custom_toolchain ${{ github.workspace }}/custom_toolchain/
           rustup override set custom_toolchain
+          rustc --version
           ${{github.workspace}}/target/kani/bin/cargo-kani setup --use-local-toolchain ${{ github.workspace }}/custom_toolchain/
 
       - name: Checkout tests
@@ -66,4 +67,3 @@ jobs:
             cargo kani
             popd
           done
-
