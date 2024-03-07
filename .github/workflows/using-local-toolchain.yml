@@ -61,9 +61,9 @@ jobs:
         # TODO: Customize compiletest to run custom kani. For now, just run a few cargo kani tests.
         run: |
           ls ./tests/cargo-ui/
-          for dir in ./tests/cargo-ui/; do
+          for dir in assess-error function multiple-harnesses; do
             >&2 echo "Running test $dir"
-            pushd $${ github.workspace }}/tests/cargo-ui/$dir
+            pushd ./tests/cargo-ui/$dir
             ${{github.workspace}}/target/kani/bin/cargo-kani
             popd
           done
