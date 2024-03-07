@@ -60,8 +60,8 @@ jobs:
       - name: Run tests
         # TODO: Customize compiletest to run custom kani. For now, just run a few cargo kani tests.
         run: |
-          ls $${ github.workspace }}/tests/cargo-ui/
-          for dir in $${ github.workspace }}/tests/cargo-ui/; do
+          ls ./tests/cargo-ui/
+          for dir in ./tests/cargo-ui/; do
             >&2 echo "Running test $dir"
             pushd $${ github.workspace }}/tests/cargo-ui/$dir
             ${{github.workspace}}/target/kani/bin/cargo-kani
