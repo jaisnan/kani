@@ -52,6 +52,7 @@ jobs:
           ls ${{ github.workspace }}/custom_toolchain/
           ls -la ~/.rustup/toolchains/
           ${{github.workspace}}/target/kani/bin/cargo-kani setup --use-local-toolchain ${{ github.workspace }}/custom_toolchain/
+          ls -la ~/.rustup/toolchains/
 
       - name: Checkout tests
         uses: actions/checkout@v4
@@ -62,6 +63,6 @@ jobs:
           for dir in simple-lib simple-visualize build-rs-works simple-kissat; do
             >&2 echo "Running test $dir"
             pushd tests/cargo-kani/$dir
-            cargo kani
+            ${{github.workspace}}/target/kani/bin/cargo-kani
             popd
           done
