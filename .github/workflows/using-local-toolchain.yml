@@ -53,8 +53,9 @@ jobs:
       - name: Ensure installation is correct
         run: |
           ls ${{ github.workspace }}/custom_toolchain/
-          ls -la ~/.rustup/toolchains/
           ${{github.workspace}}/target/kani/bin/cargo-kani setup --use-local-toolchain ${{ github.workspace }}/custom_toolchain/
+
+      - name: Ensure that the rustup toolchain is not present
           ls -la ~/.rustup/toolchains/
 
       - name: Run tests
