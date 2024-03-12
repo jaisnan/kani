@@ -145,17 +145,18 @@ pub(crate) fn get_rust_toolchain_version(kani_dir: &Path) -> Result<String> {
 fn setup_rust_toolchain(kani_dir: &Path, use_local_toolchain: Option<OsString>) -> Result<String> {
     // Currently this means we require the bundle to have been unpacked first!
     let toolchain_version = get_rust_toolchain_version(kani_dir)?;
-    println!("[3/5] Installing rust toolchain version: {}", &toolchain_version);
 
     // Symlink to a local toolchain if the user explicitly requests
     if let Some(local_toolchain_path) = use_local_toolchain {
         let toolchain_path = Path::new(&local_toolchain_path);
         // TODO: match the version against which kani was built
         // Issue: https://github.com/model-checking/kani/issues/3060
+        println!("[3/5] Installing rust toolchain version from: {}", &toolchain_path);
         symlink_rust_toolchain(toolchain_path, kani_dir)?;
         return Ok(toolchain_version);
     }
 
+    println!("[3/5] Installing rust toolchain version: {}", &toolchain_version);
     // This is the default behaviour when no explicit path to a toolchain is mentioned
     Command::new("rustup").args(["toolchain", "install", &toolchain_version]).run()?;
     let toolchain = home::rustup_home()?.join("toolchains").join(&toolchain_version);
