@@ -151,7 +151,7 @@ fn setup_rust_toolchain(kani_dir: &Path, use_local_toolchain: Option<OsString>) 
         let toolchain_path = Path::new(&local_toolchain_path);
         // TODO: match the version against which kani was built
         // Issue: https://github.com/model-checking/kani/issues/3060
-        println!("[3/5] Installing rust toolchain version from: {}", &toolchain_path);
+        println!("[3/5] Installing rust toolchain version from: {}", &toolchain_path.to_string_lossy());
         symlink_rust_toolchain(toolchain_path, kani_dir)?;
         return Ok(toolchain_version);
     }
