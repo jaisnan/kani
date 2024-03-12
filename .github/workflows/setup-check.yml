@@ -1,0 +1,87 @@
+# Copyright Kani Contributors
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# This workflow will build, and, optionally, release Kani bundles in this order.
+#
+# The release will create a draft release and upload the bundles to it, and it will only run when we push a new
+# release tag (i.e.: tag named `kani-*`).
+name: Check Setup
+on:
+  pull_request:
+  push:
+    branches:
+      - 'main'
+    tags:
+      - kani-*
+
+
+jobs:
+  test-use-local-toolchain:
+    name: TestLocalToolchain
+    needs: [build_bundle_macos, build_bundle_linux]
+    strategy:
+      matrix:
+        os: [macos-13, ubuntu-20.04, ubuntu-22.04]
+        include:
+          # Stores the output of the previous job conditional to the OS
+          - prev_job: ${{ needs.build_bundle_linux.outputs }}
+          - os: macos-13
+            prev_job: ${{ needs.build_bundle_macos.outputs }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Kani
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+          submodules: 'true'
+
+      - name: Download kani-verifier crate
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ matrix.prev_job.package }}
+
+      - name: Check download
+        run: |
+          ls -lh .
+
+      - name: Install from bundle
+        run: |
+          tar zxvf ${{ matrix.prev_job.package }}
+          cargo install --locked --path kani-verifier-${{ matrix.prev_job.crate_version }}
+
+      - name: Extract nightly version date from rust-toolchain.toml
+        id: extract-date
+        run: |
+          DATE=$(grep 'channel' rust-toolchain.toml | cut -d '=' -f2 | tr -d ' "' | cut -d'-' -f2-)
+          echo "Nightly date: $DATE"
+          echo "DATE=$DATE" >> $GITHUB_ENV
+
+      - name: Remove installed Rust toolchain
+        run: rustup toolchain remove nightly-$DATE
+
+      - name: Create a custom toolchain directory
+        run: mkdir -p ${{ github.workspace }}/custom_toolchain
+
+      - name: Fetch the nightly tarball
+        run: |
+          echo "Downloading Rust toolchain from rust server."
+          curl --proto '=https' --tlsv1.2 -O https://static.rust-lang.org/dist/$DATE/rust-nightly-x86_64-unknown-linux-gnu.tar.gz
+          tar -xzf rust-nightly-x86_64-unknown-linux-gnu.tar.gz
+          ./rust-nightly-x86_64-unknown-linux-gnu/install.sh --prefix=${{ github.workspace }}/custom_toolchain
+
+      - name: Ensure installation is correct
+        run: |
+          cargo kani setup --use-local-toolchain ${{ github.workspace }}/custom_toolchain/
+
+      - name: Ensure that the rustup toolchain is not present
+        run: ls -la ~/.rustup/toolchains/
+
+      - name: Run tests
+        run: |
+          ls ./tests/cargo-ui/
+          for dir in function multiple-harnesses verbose; do
+            >&2 echo "Running test $dir"
+            pushd ./tests/cargo-ui/$dir
+            ${{github.workspace}}/target/kani/bin/cargo-kani
+            popd
+          done
