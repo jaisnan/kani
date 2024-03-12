@@ -9,10 +9,9 @@ name: Check Setup
 on:
   pull_request:
   push:
+    # Run on changes to branches but not tags.
     branches:
-      - 'main'
-    tags:
-      - kani-*
+      - '**'
 
 
 jobs:
