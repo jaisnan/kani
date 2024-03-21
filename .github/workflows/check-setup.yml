@@ -5,11 +5,7 @@
 #
 # This will run everytime there's a change to main
 name: Check Setup
-on:
-  pull_request:
-  push:
-    branches:
-      - 'main'
+on: [pull_request]
 
 jobs:
   build_bundle_macos:
