@@ -84,6 +84,8 @@ pub fn setup(
 
     setup_kani_bundle(&kani_dir, use_local_bundle)?;
 
+
+
     setup_rust_toolchain(&kani_dir, use_local_toolchain)?;
 
     setup_python_deps(&kani_dir)?;
@@ -141,17 +143,25 @@ pub(crate) fn get_rust_toolchain_version(kani_dir: &Path) -> Result<String> {
         .context("Reading release bundle rust-toolchain-version")
 }
 
+pub(crate) fn get_rustc(kani_dir: &Path) -> Result<String> {
+    std::fs::read_to_string(kani_dir.join("rustc-version"))
+        .context("Reading release bundle rustc-version")
+}
+
 /// Install the Rust toolchain version we require
 fn setup_rust_toolchain(kani_dir: &Path, use_local_toolchain: Option<OsString>) -> Result<String> {
     // Currently this means we require the bundle to have been unpacked first!
     let toolchain_version = get_rust_toolchain_version(kani_dir)?;
+
+    let rustc_version = get_rustc(kani_dir)?;
+    println!("Rustc version used in bundle is {}", rustc_version);
 
     // Symlink to a local toolchain if the user explicitly requests
     if let Some(local_toolchain_path) = use_local_toolchain {
         let toolchain_path = Path::new(&local_toolchain_path);
 
         let build_toolchain_path = kani_dir.join("toolchain");
-        let bundle_toolchain_rustc_version = get_rustc_version_from_toolchain(build_toolchain_path.into());
+        // let bundle_toolchain_rustc_version = get_rustc_version_from_toolchain(build_toolchain_path.into());
         let custom_toolchain_rustc_version = get_rustc_version(local_toolchain_path.clone());
 
         if custom_toolchain_rustc_version.is_ok() {
@@ -207,7 +217,6 @@ fn get_rustc_version_from_toolchain(path: OsString) -> () {
     let path = Path::new(&path);
     let output = Command::new("ls").current_dir(path).output();
     println!("Contents of path are {:?}", output);
-
 }
 
 /// Get the version of rustc that is being used to setup kani by the user
