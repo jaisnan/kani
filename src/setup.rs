@@ -210,7 +210,7 @@ fn get_rustc_version(path: OsString) -> Result<String> {
     let rustc_path = path.join("bin").join("rustc");
 
     let mut binding = Command::new("ls");
-    let out = binding.current_dir(path.join("bin"));
+    let out = binding.current_dir(path.join("bin")).output()?;
     println!("Debug statement: out {:?}", out);
 
     let output = Command::new(rustc_path).arg("--version").output();
