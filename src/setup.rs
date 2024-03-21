@@ -160,11 +160,10 @@ fn setup_rust_toolchain(kani_dir: &Path, use_local_toolchain: Option<OsString>) 
     if let Some(local_toolchain_path) = use_local_toolchain {
         let toolchain_path = Path::new(&local_toolchain_path);
 
-        let build_toolchain_path = kani_dir.join("toolchain");
         // let bundle_toolchain_rustc_version = get_rustc_version_from_toolchain(build_toolchain_path.into());
-        let custom_toolchain_rustc_version = get_rustc_version(local_toolchain_path.clone());
+        let custom_toolchain_rustc_version = get_rustc_version(local_toolchain_path.clone())?;
 
-        if custom_toolchain_rustc_version.is_ok() {
+        if rustc_version == custom_toolchain_rustc_version {
             symlink_rust_toolchain(toolchain_path, kani_dir)?;
             println!(
                 "[3/5] Installing rust toolchain from path provided: {}",
@@ -173,8 +172,9 @@ fn setup_rust_toolchain(kani_dir: &Path, use_local_toolchain: Option<OsString>) 
             return Ok(toolchain_version);
         } else {
             bail!(
-                "The toolchain with rustc {:?} being used to setup is not the same as the one Kani used in its release bundle. Try to setup with the same version as the bundle.",
+                "The toolchain with rustc {:?} being used to setup is not the same as the one Kani used in its release bundle {:?}. Try to setup with the same version as the bundle.",
                 custom_toolchain_rustc_version,
+                rustc_version,
             );
         }
     }
@@ -211,12 +211,6 @@ fn setup_python_deps(kani_dir: &Path) -> Result<()> {
 /// The filename of the release bundle
 fn download_filename() -> String {
     format!("kani-{VERSION}-{TARGET}.tar.gz")
-}
-
-fn get_rustc_version_from_toolchain(path: OsString) -> () {
-    let path = Path::new(&path);
-    let output = Command::new("ls").current_dir(path).output();
-    println!("Contents of path are {:?}", output);
 }
 
 /// Get the version of rustc that is being used to setup kani by the user
