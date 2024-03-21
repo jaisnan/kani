@@ -153,7 +153,7 @@ fn setup_rust_toolchain(kani_dir: &Path, use_local_toolchain: Option<OsString>) 
     // Currently this means we require the bundle to have been unpacked first!
     let toolchain_version = get_rust_toolchain_version(kani_dir)?;
 
-    let rustc_version = get_rustc(kani_dir)?;
+    let rustc_version = get_rustc(kani_dir)?.trim().to_string();
     println!("Rustc version used in bundle is {}", rustc_version);
 
     // Symlink to a local toolchain if the user explicitly requests
