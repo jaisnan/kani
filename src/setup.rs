@@ -151,10 +151,10 @@ fn setup_rust_toolchain(kani_dir: &Path, use_local_toolchain: Option<OsString>) 
         let toolchain_path = Path::new(&local_toolchain_path);
 
         let build_toolchain_path = kani_dir.join("toolchain");
-        let bundle_toolchain_rustc_version = get_rustc_version(build_toolchain_path.into())?;
-        let custom_toolchain_rustc_version = get_rustc_version(local_toolchain_path.clone())?;
+        let bundle_toolchain_rustc_version = get_rustc_version_from_toolchain(build_toolchain_path.into());
+        let custom_toolchain_rustc_version = get_rustc_version(local_toolchain_path.clone());
 
-        if bundle_toolchain_rustc_version == custom_toolchain_rustc_version {
+        if custom_toolchain_rustc_version.is_ok() {
             symlink_rust_toolchain(toolchain_path, kani_dir)?;
             println!(
                 "[3/5] Installing rust toolchain from path provided: {}",
@@ -163,9 +163,8 @@ fn setup_rust_toolchain(kani_dir: &Path, use_local_toolchain: Option<OsString>) 
             return Ok(toolchain_version);
         } else {
             bail!(
-                "The toolchain with rustc {} being used to setup is not the same as the one {} Kani used in its release bundle. Try to setup with the same version as the bundle.",
+                "The toolchain with rustc {:?} being used to setup is not the same as the one Kani used in its release bundle. Try to setup with the same version as the bundle.",
                 custom_toolchain_rustc_version,
-                bundle_toolchain_rustc_version
             );
         }
     }
@@ -204,14 +203,17 @@ fn download_filename() -> String {
     format!("kani-{VERSION}-{TARGET}.tar.gz")
 }
 
+fn get_rustc_version_from_toolchain(path: OsString) -> () {
+    let path = Path::new(&path);
+    let output = Command::new("ls").current_dir(path).output();
+    println!("Contents of path are {:?}", output);
+
+}
+
 /// Get the version of rustc that is being used to setup kani by the user
 fn get_rustc_version(path: OsString) -> Result<String> {
     let path = Path::new(&path);
     let rustc_path = path.join("bin").join("rustc");
-
-    let mut binding = Command::new("ls");
-    let out = binding.current_dir(path.join("bin")).output()?;
-    println!("Debug statement: out {:?}", out);
 
     let output = Command::new(rustc_path).arg("--version").output();
 
