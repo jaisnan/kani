@@ -173,8 +173,8 @@ jobs:
       - name: Move tests to outside of Kani, to prevent re-fetching via rustup
         run: |
             mkdir -p post-setup-tests
-            cp kani/tests/cargo-ui post-setup-tests
-            cp kani/tests/kani/Assert post-setup-tests
+            cp -r kani/tests/cargo-ui post-setup-tests
+            cp -r kani/tests/kani/Assert post-setup-tests
 
       - name: Run cargo-kani tests after moving
         run: |
