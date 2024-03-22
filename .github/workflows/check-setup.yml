@@ -113,24 +113,15 @@ jobs:
           prev_job: ${{ needs.build_bundle_linux.outputs }}
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout Kani under "kani"
-        uses: actions/checkout@v4
-        with:
-          path: kani
-
-      - name: Setup Kani Dependencies
-        uses: ./kani/.github/actions/setup
-        with:
-          os: ${{ matrix.os }}
-          kani_dir: 'kani'
-
-      - name: Build Kani
-        run: cargo install --locked --path ./kani
-
       - name: Download bundle
         uses: actions/download-artifact@v3
         with:
           name: ${{ matrix.prev_job.bundle }}
+
+      - name: Download kani-verifier crate
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ matrix.prev_job.package }}
 
       - name: Check download
         run: |
@@ -145,7 +136,8 @@ jobs:
 
       - name: Install Kani from path
         run: |
-          cargo install --locked --path kani
+          tar zxvf ${{ matrix.prev_job.package }}
+          cargo install --locked --path kani-verifier-${{ matrix.prev_job.crate_version }}
 
       - name: Create a custom toolchain directory
         run: mkdir -p ${{ github.workspace }}/custom_toolchain
