@@ -185,7 +185,7 @@ jobs:
 
       - name: Run standalone kani test
         run: |
-          >&2 echo "Running test on file $dir"
-          pushd kani/tests/kani/$dir
-          kani ./bool_ref.rs
+          >&2 echo "Running test on file bool_ref"
+          pushd kani/tests/kani/Assert
+          kani bool_ref.rs
           popd
