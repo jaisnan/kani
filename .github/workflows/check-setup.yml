@@ -167,7 +167,7 @@ jobs:
 
       - name: Move rust-toolchain file to outside kani
         run: |
-          mv rust-toolchain.toml ${{ github.workspace }}
+          mv rust-toolchain.toml ${{ github.workspace }}/../
 
       - name: Run cargo-kani tests after moving
         run: |
@@ -191,4 +191,4 @@ jobs:
 
       - name: Run standalone kani test
         run: |
-          mv ${{ github.workspace }}/rust-toolchain.toml .
+          mv ${{ github.workspace }}/../rust-toolchain.toml .
