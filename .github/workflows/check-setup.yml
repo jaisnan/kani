@@ -170,17 +170,18 @@ jobs:
             exit 1
           fi
 
-      - name: Move tests to outside of Kani, to prevent re-fetching via rustup
+      - name: Checkout tests
+        uses: actions/checkout@v4
+
+      - name: Move rust-toolchain file to outside kani
         run: |
-            mkdir -p post-setup-tests
-            cp kani/tests/cargo-ui post-setup-tests
-            cp kani/tests/kani/Assert post-setup-tests
+          mv rust-toolchain.toml ${{ github.workspace }}
 
       - name: Run cargo-kani tests after moving
         run: |
           for dir in function multiple-harnesses verbose; do
             >&2 echo "Running test $dir"
-            pushd post-setup-tests/cargo-ui/dir
+            pushd tests/cargo-ui/$dir
             cargo kani
             popd
           done
@@ -192,6 +193,10 @@ jobs:
       - name: Run standalone kani test
         run: |
           >&2 echo "Running test on file bool_ref"
-          pushd post-setup-tests/Assert
+          pushd tests/kani/Assert
           kani bool_ref.rs
           popd
+
+      - name: Run standalone kani test
+        run: |
+          mv ${{ github.workspace }}/rust-toolchain.toml .
