@@ -187,5 +187,5 @@ jobs:
         run: |
           >&2 echo "Running test on file $dir"
           pushd kani/tests/kani/$dir
-          kani bool_ref.rs
+          kani ./bool_ref.rs
           popd
