@@ -183,15 +183,14 @@ jobs:
 
       - name: Check --help and --version
         run: |
+          >&2 echo "Running cargo kani --help and --version"
+          pushd ${{ github.workspace }}/../post-setup-tests/Assert
           cargo kani --help && cargo kani --version
-
-      - name: Run standalone kani test
-        run: |
-          >&2 echo "Running test on file bool_ref"
-          pushd ${{ github.workspace }}/../post-setup-tests/kani/Assert
-          kani bool_ref.rs
           popd
 
       - name: Run standalone kani test
         run: |
-          mv ${{ github.workspace }}/../rust-toolchain.toml .
+          >&2 echo "Running test on file bool_ref"
+          pushd ${{ github.workspace }}/../post-setup-tests/Assert
+          kani bool_ref.rs
+          popd
