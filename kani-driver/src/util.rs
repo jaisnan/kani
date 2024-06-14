@@ -82,6 +82,10 @@ pub fn specialized_harness_name(linked_obj: &Path, harness_filename: &str) -> Pa
     alter_extension(linked_obj, &format!("for-{harness_filename}.out"))
 }
 
+pub fn test_function() {
+    assert!(1==1);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
